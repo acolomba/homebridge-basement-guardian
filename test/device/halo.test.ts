@@ -1,7 +1,15 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/** @fileoverview Verifies the HALO identity contract and product name. */
+
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { HALO_DEVICE_TYPE_ID, HALO_DISPLAY_NAME } from '../../src/device/halo.js';
+import { HALO_DISPLAY_NAME } from '../../src/device/halo.js';
 
 import type { HaloDeviceTypeId } from '../../src/device/halo.js';
 
@@ -12,12 +20,13 @@ void ('wayneWaterGemini' satisfies HaloDeviceTypeId);
 // @ts-expect-error a device type the plugin has never seen is not a HALO
 void ('wayneWaterUnknown' satisfies HaloDeviceTypeId);
 
-test('HALO_DEVICE_TYPE_ID carries the HALO deviceTypeId', () => {
-  // act & assert
-  assert.strictEqual(HALO_DEVICE_TYPE_ID, 'wayneWaterHalo');
-});
+test('HALO_DISPLAY_NAME carries the HALO product name', () => {
+  // arrange
+  const expectedDisplayName = 'Wayne Water HALO';
 
-test('HALO_DISPLAY_NAME carries a non-empty product name', () => {
-  // act & assert
-  assert.strictEqual(HALO_DISPLAY_NAME, 'Wayne Water HALO');
+  // act
+  const displayName = HALO_DISPLAY_NAME;
+
+  // assert
+  assert.strictEqual(displayName, expectedDisplayName);
 });

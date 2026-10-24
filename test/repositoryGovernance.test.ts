@@ -12,8 +12,8 @@ import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-// This file compiles to `dist-test/test/repositoryGovernance.test.js`, the same depth as
-// `dist-test/test/packageManifest.test.js`, so the repository root is two levels up.
+// This file compiles to `dist-test/test/repositoryGovernance.test.js`, so the
+// repository root is two levels up.
 const REPOSITORY_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 function readRepoFile(relativePath: string): string {

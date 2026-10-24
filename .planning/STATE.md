@@ -1,86 +1,43 @@
 ---
-gsd_state_version: 1.0
-current_phase: 05
-current_phase_name: Degraded Operation and Recovery
-status: "Phase 06 shipped — PR #4"
-stopped_at: "Completed quick task 260905-whi: Switch publish.yml to npm Trusted Publishing (OIDC)"
-last_updated: "2026-09-06T03:34:36.426Z"
-last_activity: 2026-09-05
-last_activity_desc: "Completed quick task 260905-t6o: Prepare release infrastructure (SonarCloud, npm latest tag, README badges/disclaimer, CHANGELOG 0.1.0 cut)"
-state_head: 7aae39e6f3eb56b2077a907df4a7a10c8ebfd755
+gsd_state_version: "1.0"
+milestone: code-review-sweep
+milestone_name: Code Review Sweep
+status: Awaiting next milestone
+stopped_at: Phase 8 complete — all phases complete
+last_updated: "2026-10-23T15:44:21.337Z"
+last_activity: 2026-10-23
+last_activity_desc: Milestone code-review-sweep completed and archived
+state_head: 0c2adafb44a71a6c18c66fe69991cb7d238de3b1
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 73
-  completed_plans: 73
+  total_phases: 8
+  completed_phases: 8
+  total_plans: 106
+  completed_plans: 106
   percent: 100
+current_phase: 8
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-04)
+See: .planning/PROJECT.md (updated 2026-10-23)
 
 **Core value:** HomeKit must promptly show trustworthy basement-protection conditions while clearly marking stale or invalid telemetry instead of reporting a false normal state.
-**Current focus:** Phase 06 — Validated Release Candidate
+**Current focus:** Planning the next milestone; G-001 through G-004 remain release gates.
 
 ## Current Position
 
-Phase: 05 — Degraded Operation and Recovery
-Plan: Not started
-Status: Phase 06 shipped — PR #4
-Last activity: 2026-09-07 - Completed quick task 260907-c7j: refinements, Sonar alignment, and a converged pr-review-toolkit loop
-
-**The per-phase counter read `2 of 7` while waves 1 through 4 were already done, and is reconciled
-here by hand.** `state.advance-plan` moves it one step per call and was called once for a wave that
-had already advanced it, so it drifted two behind. The project totals are not affected: they are
-recomputed from disk and stand at 61 of 63.
-
-**The plan counter above read `5 of 5` until 2026-09-02 and was wrong.** Phase 05 carries eleven
-`05-NN-PLAN.md` files, not five: the first five, and six more planned after `05-VERIFICATION.md`
-returned `gaps_found` on 2026-09-02. `state.advance-plan` had nothing to advance into because it
-reads a per-phase total that was never widened, so the counter is reconciled here by hand and
-`state.update-progress` recomputed the project totals from disk (48 of 48).
-
-Phase 05 has `05-CONTEXT.md`, `05-RESEARCH.md`, `05-PATTERNS.md`, `05-VALIDATION.md`,
-`05-VERIFICATION.md`, `05-REVIEW.md` and eleven `05-NN-PLAN.md` files, all committed. Waves are
-sequential (01 → 02 → 03 → 04 → 05, then 06 → 07 → 08 → 09 → 11 → 10) because the plans touch
-`platform.ts`, `basementGuardian.ts`, `accountRuntime.ts` or `degradedOperation.feature`, which
-matches the constraint that executors run on the main working tree rather than in worktrees.
-
-The gap-closure round closed all three critical review findings, the two partial roadmap success
-criteria, and all seven plan truths the verifier recorded as not done. The ledger of the seven is in
-`05-10-SUMMARY.md`. RES-04 is complete on clause-by-clause evidence; RES-01 and RES-03 stand;
-SYNC-03 is Complete as of 2026-09-03. It stayed pending until then for a records reason, not an
-evidence one; quick task 260903-ho5 closed it with the other eleven Phase 1 rows.
-
-**Plan 05-01 opens with a `checkpoint:decision` task and is therefore `autonomous: false`.** It asks
-which of two locked decisions governs a REST-only degradation: `D-02` (narrowed) has it withdraw the
-`connectivity` scope, so `Basement Guardian Offline` reads `Status Active = false`; `D-04` says a
-REST-only degradation does not mark HomeKit at all. The plans implement `D-02` and resolve that way
-unattended. The checkpoint names the six artifacts that change under `D-04`.
-
-Phase 04 (Pump Records and Official Controls) is implementation-complete on branch
-`features/phase-04-pump-records-and-official-controls`, verified 17/17 must-haves, with six human
-items deferred to `/gsd-verify-work 4`. Phase 5 continues on the same branch.
-
-Phase 03 check 1 (flood automation survives a degraded `water` scope) remains OPEN and
-gates the `1.0.0` release, not Phase 05.
-
-Phase 01 is COMPLETE as of 2026-08-29. Verification is `passed` at 22/22, with all
-three UAT items passed against real hardware.
-
-Phase 02 is COMPLETE as of 2026-08-29. Verification is `passed` at 25/27, with both
-backstop-tagged UAT items accepted on structural evidence and no defects found.
-
-Progress: [███░░░░░░░] 2 of 6 phases verified ([██████░░░░] 57%) — 48/48 plans complete; Phases 3, 4 and 5 are implementation-complete with human verification deferred. The `37/42` figure this line carried until 2026-09-02 predated phase 05's six gap-closure plans; `state.update-progress` recomputed both counts from disk.
+Phase: Milestone code-review-sweep complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-10-23 — Milestone code-review-sweep completed and archived
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 37
+- Total plans completed: 113
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -88,11 +45,15 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([████
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 02 | 6 | - | - |
+| 2 | 5 | - | - |
 | 05.1 | 7 | - | - |
-| 06 | 10 | - | - |
-| 03 | 8 | - | - |
-| 04 | 6 | - | - |
+| 6 | 9 | - | - |
+| 3 | 8 | - | - |
+| 4 | 19 | - | - |
+| 1 | 4 | - | - |
+| 05 | 9 | - | - |
+| 7 | 30 | - | - |
+| 8 | 22 | - | - |
 
 **Recent Trend:**
 
@@ -149,12 +110,34 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([████
 | Phase 06 P08 | 30min | 2 tasks | 6 files |
 | Phase 06 P10 | 7min | 2 tasks | 1 files |
 | Phase quick-260905-whi P01 | ~10min | 2 tasks | 2 files |
+| Phase 05 P01 | 13 min | 3 tasks | 4 files |
+| Phase 05 P02 | 2h 45m | 3 tasks | 14 files |
+| Phase 05 P03 | 3h 4m | 3 tasks | 10 files |
+| Phase 05 P04 | 6h 11m | 3 tasks | 14 files |
+| Phase 05 P05 | 3h 36m | 3 tasks | 15 files |
+| Phase 05 P06 | 1h 25m | 2 tasks | 8 files |
+| Phase 05 P07 | 1h 52m | 3 tasks | 12 files |
+| Phase 06 P01 | 5min | 2 tasks | 2 files |
+| Phase 06 P02 | 29min | 3 tasks | 9 files |
+| Phase 06 P03 | 44min | 3 tasks | 7 files |
+| Phase 07 P01 | 6min | 2 tasks | 2 files |
+| Phase 07 P15 | 6min | 2 tasks | 10 files |
+| Phase 07 P16 | 20min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
 ### Decisions
 
 All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Current planning anchors:
+
+- **[code-review-sweep roadmap, 2026-10-13]: Eight phases, numbered from 1.** Phase 1
+  fixes SC-01 to SC-05 and sets the file-header form, the findings-ledger format, and
+  the review loop that Phases 2 to 8 reuse. Phases 2 to 7 sweep `src/cloud`,
+  `src/device` + `src/persistence`, `src/runtime`, `src/accessories`, the root modules,
+  and `features/**`. Phase 6 runs after Phase 5 because `platform.ts` wires the
+  accessories tier. The spot check's WARNING lines go to Phases 2, 3, and 5, which own
+  their files. PROC-01 and PROC-02 trace to Phase 1 and BUG-01 to Phase 8, but every
+  phase applies all three.
 
 - **[Post-Phase 06, decided 2026-09-07]: A tagged commit publishes; Phase 6's D-01 is amended.**
   Phase 06's D-01 said Phase 6 stops at "ready to publish," which was right for that phase. The
@@ -461,6 +444,28 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 06]: [Phase 06] 06-10: npm run check passed clean on the combined tree with no fallow exemption needed; fallow dupes reported two clone groups (one in this phase's new realWorld.ts) but neither crossed the --fail-on-issues threshold, confirmed by running fallow dupes standalone.
 - [Phase 06]: [Phase 06] 06-10: CHANGELOG.md's [Unreleased] section records all of Phase 6's user-visible additions/changes (real-pump suite, SECURITY.md, CI Homebridge matrix, license boundary, README child-bridge/prerelease-alarm/Critical-Alerts disclosures) with no G-00X gate claimed and no new version heading, per D-01.
 - [Phase 05]: [Quick task 260905-whi]: .github/workflows/publish.yml's publish job switched from a stored NPM_TOKEN secret to npm Trusted Publishing (OIDC) -- id-token: write, an environment block naming homebridge-basement-guardian's own npm page, and npm publish --access public --provenance -- now that 0.1.0 is confirmed live (Trusted Publishing cannot bootstrap a package's first publish). package.json's repository.url gained the git+ prefix npm's own publish step already normalized it to. User setup required before the next run: a trusted publisher must be registered on npmjs.com's package settings dashboard (no CLI path exists) linking this repo, publish.yml, and the npm environment.
+- [Phase 01]: Commit complete RED regression patch and failure evidence before active test plus GREEN fix; maintainer-approved passing-hook exception
+- [Phase 01]: TDD subject-pattern gate cannot detect domain-scoped commits; approved D-06 evidence919d70d precedes fix3878103 and actual regression provenance is verified. Preserve project prohibition on GSD phase commit titles.
+- [Phase 01]: Maintainer accepted bounded state/cancellation coverage and preserved telemetry/accurate completion judgments E-07 E-08 P-01 P-02 on 2026-10-13; Phase 1 passes.
+- [Phase 4]: [code-review-sweep] Actual ACCOUNT correction2 at d0f46b0: opening15, fixed14, rejected0, new045-048=4, reopened0, closing041/045/046/047/048=5; counter2, accepted48/closed43. Parent FIRST applied D-03 before any next tool: all predicates false. Plans18/19 declare serial bounded causes then ONE full correction3; 09 metadata follows19 only after resolved findings, 10 follows09. Numerical09 ledger remains8a700ac; RUN-01 Pending and WINDOWS46-58 OPEN/unwaived. Plan checker completed with0 blockers and2 low-confidence aggregate estimate advisories; actual per-invocation read volumes must be refreshed without reducing mandatory scope.
+- [Phase 4]: [code-review-sweep] Actual whole ACCOUNT correction3 at4a4e445: opening=fixed041/045/046/047/048=5; rejected/new/reopened/closing all0; continuouscounter3, accepted48 independentlyclosed48. Root FIRST applied D-03 before any next tool: all three predicates false. Subsequent full npm run check0 (104scenarios1156steps43pairs) permits19 closeout then09 metadata and10 seal. No original09 repair replay; immutable09ledger8a700ac preserved. RUN-01 Pending; WINDOWS46-58 OPEN/unwaived and E/P actual judgments remain later phase work.
+- [Phase 05]: Phase 5 Wave 0 base is e65382053a26 (phase-start state commit); every batch runs 05-ledger-tracer.mjs after each ledger change — The tracer accepts the ledger and rejects eight planted copies, so batch closure claims are checked mechanically
+- [Phase 05]: DECLARATIONS closed clean at correction round 4 (28 findings fixed); the maintainer resolved the round-2 D-03 no-progress stop with 'Resolve and continue' — Each new cause was a subtler gap in the same alarm-mute scan, not a failed repair; the 026 repair closed the whole naming class
+- [Phase 05]: CATALOGUE closed clean at correction round 6 (24 findings fixed); the maintainer resolved two D-03 no-progress stops at rounds 2 and 3 — Each stop surfaced pre-existing pin gaps of one class; a per-row coverage sweep from round 3 closed the class by round 5
+- [Phase 05]: 05-04: CONTROLS found three genuine control-path bugs (D-037, D-038): a second press while a request waits is refused with RESOURCE_BUSY, a timed-out command keeps its pending entry and window, and its warning says it may still have reached the device — Locked D-037 and D-038 name the behavior; each fix landed RED-to-GREEN with committed evidence, and no existing refusal changed its answer
+- [Phase 05]: 05-04: the maintainer resolved four CONTROLS D-03 no-progress stops (rounds 4, 6, 7, 8); comment-claims audits per sentence and per clause closed the batch at round 9 — Each stop came from one or two new comment claims or a pre-existing test gap; the audits made the class checkable
+- [Phase 05]: 05-05: RECORDS fixed three pump-record bugs (a real backup run labelled a self-test, a restart mid-run counted twice, a same-observation edge taking an earlier run's timestamp) with maintainer approval; the awaiting state is persisted as optional watermarks.backupEdgeAwaitingTimestamp — Each landed RED-to-GREEN; no top-level context key changed; the 032 first-timestamp trade-off was kept by the maintainer
+- [Phase 06]: Phase 6 inventory contains six mirrored root pairs; the two maintainer-deleted repository tests stay excluded.
+- [Phase 06]: Phase 6 uses the Phase 1 four-round and evidence-first review contract without the Phase 5 GATES exception.
+- [Phase 06]: Config refusals omit supplied values before platform logging to protect private input.
+- [Phase 06]: Runtime email validation checks practical dot-atom text and DNS labels for hand-edited config.
+- [Phase 06]: Redact longer registered secrets before shorter overlapping values.
+- [Phase 06]: Match raw and JSON-escaped registered values in object descriptions.
+- [Phase 06]: Keep ENTRY correction round 0 open until 06-04 reviews all six files after index repairs.
+- [Phase 07]: ROADMAP Phase 7 criteria govern FEAT-01 and FEAT-02 while their probes remain unclassified and unresolved.
+- [Phase 07]: The 37 tracked Phase 7 paths have disjoint batch owners and remain pending until complete-file reviews report evidence.
+- [Phase 07]: Keep ACCESSORY-009 catalogue assertion and ACCESSORY-019 private-context scenario unchanged under maintainer rulings.
+- [Phase 07]: Leave FEAT-01 and FEAT-02 pending until remaining declaring plans and combined gate finish.
 
 ### Pending Todos
 
@@ -647,47 +652,35 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
-| 260907-c7j | Capture the package-lock.json regeneration, clear the eight open SonarCloud findings, bump to 0.1.1, enforce the Sonar ruleset locally in eslint, and run the pr-review-toolkit review loop to convergence | 2026-09-07 | 6cc2c7b | Complete -- 5 blocking review findings fixed and re-verified closed; round 2 clean across all dimensions; npm run check green (1467 unit, 104 scenarios), coverage 100% | [260907-c7j-capture-package-lock-json-change-address](./quick/260907-c7j-capture-package-lock-json-change-address/) |
-| 260906-d6e | Rename "Backup Pump Activated" to "Backup Pump Running" and swap the two backup-battery displayNames ("Backup Battery Level" / "Backup Battery"), reorder config.schema.json's ignoredFaults enum, add required email/password to README's config example, convert the Eve-app footnote to a GFM admonition, run simple-english/humanizer over README.md and CONTRIBUTING.md, and reset CHANGELOG's 0.1.0 entry to two bullets | 2026-09-06 | 84f1f03 | Complete — typecheck/lint/fallow/format:check pass, cucumber 104/104, unit tests show no failure beyond 5 pre-existing unrelated ones | [260906-d6e-rename-pump-running-and-battery-services](./quick/260906-d6e-rename-pump-running-and-battery-services/) |
-| 260905-whi | Switch publish.yml to npm Trusted Publishing (OIDC), matching pi-claude-marketplace, now that 0.1.0 is live on the registry | 2026-09-05 | 7aae39e | Complete — trusted publisher registration on npmjs.com still needed before next publish run | [260905-whi-switch-publish-yml-to-npm-trusted-publis](./quick/260905-whi-switch-publish-yml-to-npm-trusted-publis/) |
-| 260905-t6o | Prepare release infrastructure: SonarCloud config + workflow, npm publish tag change to `latest` for the real 0.1.0 release, README badges and disclaimer rewrite, CHANGELOG 0.1.0 cut | 2026-09-05 | 3b76e49 | Complete — see the deliberate REL-07 exception note above | [260905-t6o-prepare-release-infrastructure-sonarclou](./quick/260905-t6o-prepare-release-infrastructure-sonarclou/) |
-| 260905-fiy | Fix missing per-step timeout on the real-pump heartbeat wait step so scenarios can actually complete their 960s wait instead of dying to Cucumber's 5000ms default step timeout | 2026-09-05 | 892a6c7 | Complete — fix verified via typecheck/build/dry-run, live real-pump re-run pending | [260905-fiy-fix-missing-per-step-timeout-on-the-real](./quick/260905-fiy-fix-missing-per-step-timeout-on-the-real/) |
-| 260904-od5 | Repair the stale ROADMAP.md progress table and checklist — Phase 3/4/5/5.1 flipped from stale/missing to their true measured status | 2026-09-04 | 13709c5 | Complete — checklist and table reconciled with STATE.md | [260904-od5-repair-the-stale-roadmap-md-progress-tab](./quick/260904-od5-repair-the-stale-roadmap-md-progress-tab/) |
-| 260904-o05 | Close WINDOWS.md ledger entries 37-40 — records drift between the ledger and 05-VALIDATION.md/05-VERIFICATION.md, all already reconciled in the live files | 2026-09-04 | 82f0eae | Fixed — 4/4 entries closed, no code or doc changes needed | [260904-o05-close-windows-md-ledger-entries-37-38-39](./quick/260904-o05-close-windows-md-ledger-entries-37-38-39/) |
-| 260904-mkz | Close WINDOWS.md ledger entry 43 — a stray shadow message for an already-removed pump was re-arming its dropped arrival stamp | 2026-09-04 | 4c9f74c |  | [260904-mkz-close-windows-md-ledger-entry-43-open-ph](./quick/260904-mkz-close-windows-md-ledger-entry-43-open-ph/) |
-| 260903-q06 | Correct the telemetry-ownership guard's stated reason and test it with the input that can actually arrive | 2026-09-03 | 05e6cb0 | Complete — guard byte-identical, 5 sites corrected | [260903-q06-correct-the-telemetry-ownership-guard-s-](./quick/260903-q06-correct-the-telemetry-ownership-guard-s-/) |
-| 260903-ho5 | Reconcile the Phase 1 requirement rows and the Phase 5 validation status cells against measured evidence | 2026-09-03 | 858ce2c | Verified — 5/6, one cell corrected | [260903-ho5-reconcile-the-phase-1-requirement-rows-a](./quick/260903-ho5-reconcile-the-phase-1-requirement-rows-a/) |
-| 260902-jou | Fix accessory registration being voided by pre-registration persist | 2026-09-02 | 67a3ee5 |  | [260902-jou-fix-accessory-registration-voided-by-pre](./quick/260902-jou-fix-accessory-registration-voided-by-pre/) |
-| 260831-knc | Name every published service with ConfiguredName so Apple Home shows it | 2026-08-31 | 39560ac |  | [260831-knc-name-every-published-service-with-config](./quick/260831-knc-name-every-published-service-with-config/) |
-| 260831-dlv | Render ignoredFaults as labelled checkboxes in the settings form | 2026-08-31 | cdb183d |  | [260831-dlv-render-ignoredfaults-as-labelled-checkbo](./quick/260831-dlv-render-ignoredfaults-as-labelled-checkbo/) |
-| 260831-c7f | Render ignoredFaults options as human-readable names in the plugin settings GUI | 2026-08-31 | 645208b |  | [260831-c7f-render-ignoredfaults-options-as-human-re](./quick/260831-c7f-render-ignoredfaults-options-as-human-re/) |
-| 260829-idd | Correct vendor API intel to the measured wire shape | 2026-08-29 | cd7c651 |  | [260829-idd-correct-vendor-api-intel-to-the-measured](./quick/260829-idd-correct-vendor-api-intel-to-the-measured/) |
-| 260829-gx6 | Fix vendor REST wire-shape defects in device discovery | 2026-08-29 | 6826afd | Verified | [260829-gx6-fix-vendor-rest-wire-shape-defects-in-de](./quick/260829-gx6-fix-vendor-rest-wire-shape-defects-in-de/) |
-| 260828-bq0 | Refine planning artifacts against ingested intel | 2026-08-28 | 76b3edd |  | [260828-bq0-refine-planning-artifacts-against-ingest](./quick/260828-bq0-refine-planning-artifacts-against-ingest/) |
-| 2 | Set the package version to 0.1.0 | 2026-08-28 | 4e46bd1 |  | — |
-| 260828-jaf | Record constructor dependency injection as a revisitable preference | 2026-08-28 | b0543e2 |  | [260828-jaf-record-constructor-dependency-injection-](./quick/260828-jaf-record-constructor-dependency-injection-/) |
-| 260828-jkw | Add agent reference documentation links | 2026-08-28 | 91c21a1 |  | [260828-jkw-add-agent-reference-documentation-links](./quick/260828-jkw-add-agent-reference-documentation-links/) |
-| 9 | Sort the ignoredFaults options alphabetically by their label | 2026-08-31 | c268b34 | — | — |
-| 260904-nr6 | Confirm and close WINDOWS.md ledger entry 42 — the silent-live-connection log line's deviceId disclosure | 2026-09-04 | 7da16d6 | — | [260904-nr6-confirm-and-close-windows-md-ledger-entr](./quick/260904-nr6-confirm-and-close-windows-md-ledger-entr/) |
+| 261016-wbo | Update Phase 5 planning files to the new skill and step paths | 2026-10-17 | 2abef60 | — | [261016-wbo-update-phase-5-planning-files-to-the-new](./quick/261016-wbo-update-phase-5-planning-files-to-the-new/) |
+| 261019-56i | Replace custom accessory source scanners with ESLint boundary rules while retaining runtime and HAP parity tests | 2026-10-19 | 3299b7e | complete | [261019-56i-replace-custom-accessory-source-scanners](./quick/261019-56i-replace-custom-accessory-source-scanners/) |
+| 261019-68p | Reconcile accessory closeout after retiring source scanners | 2026-10-19 | a95b870 | complete | [261019-68p-reconcile-accessory-closeout-after-retir](./quick/261019-68p-reconcile-accessory-closeout-after-retir/) |
+| 261019-6mp | Record accepted accessory phase verification judgments | 2026-10-19 | this commit | complete | [261019-6mp-record-accepted-accessory-phase-verifica](./quick/261019-6mp-record-accepted-accessory-phase-verifica/) |
+| 261019-bxz | Remove two unpaired tests and stale handoffs | 2026-10-19 | 9605a63 | complete | [261019-bxz-remove-two-unpaired-tests-and-stale-hand](./quick/261019-bxz-remove-two-unpaired-tests-and-stale-hand/) |
 
 ## Deferred Items
 
 | Category | Item | Status | Deferred At | Milestone |
 |----------|------|--------|-------------|-----------|
+| debug_sessions | shadow-no-telemetry-liveness | awaiting_human_verify | 2026-10-23 | code-review-sweep |
 | review_advisory | Refused HomeKit removal still refetches the device inventory every poll, doubling the REST rate; only the log was throttled (8d8ffc0) | Deferred | 2026-09-07 | 1.0 |
 | Device family | HALO adapter implementation | Deferred | Initialization | v2 |
 | Setup | Custom setup interface | Deferred | Initialization | v2 |
 | uat_gaps | 04/04-UAT.md | testing::scenarios=0 | 2026-09-05 | 1.0 |
 | uat_gaps | 06/06-UAT.md | testing::scenarios=5 | 2026-09-05 | 1.0 |
 | verification_gaps | 03/03-VERIFICATION.md | human_needed | 2026-09-05 | 1.0 |
+| debug_sessions | knowledge-base | unknown (resolved-session index, not an open session) | 2026-10-13 | v1.0 |
+| quick_tasks | 260906-d6e-rename-pump-running-and-battery-services | complete (84f1f03) | 2026-10-13 | v1.0 |
 | verification_gaps | 04/04-VERIFICATION.md | human_needed | 2026-09-05 | 1.0 |
 
 ## Session Continuity
 
-Last session: 2026-09-06T03:34:24.311Z
-Stopped at: Completed quick task 260905-whi: Switch publish.yml to npm Trusted Publishing (OIDC)
-regression gate / verify_phase_goal / milestone lifecycle
+Last session: 2026-10-21T15:06:59.398Z
+Stopped at: Phase 8 complete — all phases complete
 Resume file: None
+
+The notes below describe the v1.0 milestone, which shipped on 2026-10-13. They stay
+for history; they do not describe code-review-sweep work.
 
 **Read this before doing anything.** Phase 6 (Validated Release Candidate) has all 10 plans
 executed and committed on branch `features/phase-06-validated-release-candidate` (unpushed —
@@ -786,3 +779,7 @@ Phase 5 and Phase 5.1 are both complete and verified (`passed`, 8/8 and prior ga
 **Unpushed.** No upstream is configured for the current branch
 (`features/phase-05.1-per-pump-trust-and-monotonic-silence`); all work through Phase 05.1's
 completion exists only locally until someone pushes it.
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

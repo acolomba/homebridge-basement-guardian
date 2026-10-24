@@ -1,10 +1,20 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests the service catalogue rows and their publish helpers.
+ */
+
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { describe, test } from 'node:test';
 import { isDeepStrictEqual } from 'node:util';
 
-import { createFakeHap } from '../../features/support/fakeHap.js';
-import { createFakeAccessory } from '../../features/support/fakeHomebridgeApi.js';
+import { asHapNamespace, createFakeHap } from '../../features/lib/hap.js';
+import { asPlatformAccessory, createFakeAccessory } from '../../features/lib/homebridgeApi.js';
 import { createCustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
 import { createCustomServices } from '../../src/accessories/customServices.js';
 import {
@@ -14,7 +24,6 @@ import {
   ensureService,
   isRowFullyTrusted,
   isRowPublishable,
-  isRowTrusted,
   numberOf,
   publishedService,
   publishPersistentFailure,
@@ -54,28 +63,30 @@ const FILTER_MAINTENANCE_UUID = '000000BA-0000-1000-8000-0026BB765291';
 // it survived cannot be satisfied by a seed.
 const USER_RENAME = 'Fuse Box';
 
-/** One backup-battery reading, and the low-battery verdict `D-07` gives it. */
+/** One backup-battery reading, the low-battery verdict `D-07` gives it, and the status HomeKit shows for it. */
 interface BatteryReading {
   healthCode: number;
   voltageLow: boolean;
   low: boolean;
+  verdict: 'low' | 'normal';
+  status: number;
 }
 
 // The `D-07` sources, written out here rather than derived: LOW for a low voltage, or for health
 // 1 (Replace), 2 (Poor), or 32 (NotDetected); NORMAL for 4 (Okay), 8 (Good), and 16 (NA).
 const BATTERY_READINGS: readonly BatteryReading[] = [
-  { healthCode: 1, voltageLow: false, low: true },
-  { healthCode: 2, voltageLow: false, low: true },
-  { healthCode: 4, voltageLow: false, low: false },
-  { healthCode: 8, voltageLow: false, low: false },
-  { healthCode: 16, voltageLow: false, low: false },
-  { healthCode: 32, voltageLow: false, low: true },
-  { healthCode: 1, voltageLow: true, low: true },
-  { healthCode: 2, voltageLow: true, low: true },
-  { healthCode: 4, voltageLow: true, low: true },
-  { healthCode: 8, voltageLow: true, low: true },
-  { healthCode: 16, voltageLow: true, low: true },
-  { healthCode: 32, voltageLow: true, low: true },
+  { healthCode: 1, voltageLow: false, low: true, verdict: 'low', status: BATTERY_LEVEL_LOW },
+  { healthCode: 2, voltageLow: false, low: true, verdict: 'low', status: BATTERY_LEVEL_LOW },
+  { healthCode: 4, voltageLow: false, low: false, verdict: 'normal', status: BATTERY_LEVEL_NORMAL },
+  { healthCode: 8, voltageLow: false, low: false, verdict: 'normal', status: BATTERY_LEVEL_NORMAL },
+  { healthCode: 16, voltageLow: false, low: false, verdict: 'normal', status: BATTERY_LEVEL_NORMAL },
+  { healthCode: 32, voltageLow: false, low: true, verdict: 'low', status: BATTERY_LEVEL_LOW },
+  { healthCode: 1, voltageLow: true, low: true, verdict: 'low', status: BATTERY_LEVEL_LOW },
+  { healthCode: 2, voltageLow: true, low: true, verdict: 'low', status: BATTERY_LEVEL_LOW },
+  { healthCode: 4, voltageLow: true, low: true, verdict: 'low', status: BATTERY_LEVEL_LOW },
+  { healthCode: 8, voltageLow: true, low: true, verdict: 'low', status: BATTERY_LEVEL_LOW },
+  { healthCode: 16, voltageLow: true, low: true, verdict: 'low', status: BATTERY_LEVEL_LOW },
+  { healthCode: 32, voltageLow: true, low: true, verdict: 'low', status: BATTERY_LEVEL_LOW },
 ];
 
 // The documented protection-duration bands, published as reported and never arbitrated against the
@@ -87,8 +98,7 @@ const PROTECTION_BANDS: readonly { protectionHoursCode: number; levelPercent: nu
   { protectionHoursCode: 8, levelPercent: 100 },
 ];
 
-// Every scope a row can read, written out here rather than imported, so a scope added to the union
-// without a row reading it is visible at this boundary too.
+// Every trust scope a row can read, so a case can untrust each scope in turn or all of them at once.
 const TRUST_SCOPES: readonly TrustScope[] = ['water', 'pump', 'power', 'battery', 'fault', 'connectivity', 'self-test', 'alarm-mute'];
 
 // Every equipment-fault adapter, in the order the catalogue publishes them.
@@ -100,34 +110,65 @@ const FAULT_ADAPTERS: readonly ServiceKind[] = [
   'basement-guardian-offline',
 ];
 
-const CLEAR_FAULTS = {
-  primaryPumpFault: false,
-  backupPumpFault: false,
-  backupPumpFuseBlown: false,
-  waterSensorFault: false,
-  controllerLinkPresent: true,
-};
+// A decoded fault group that reports no condition, new on every call.
+function clearFaults(): Record<string, boolean> {
+  return {
+    primaryPumpFault: false,
+    backupPumpFault: false,
+    backupPumpFuseBlown: false,
+    waterSensorFault: false,
+    controllerLinkPresent: true,
+  };
+}
 
-/** One reported condition, and the single adapter it may activate. */
+/**
+ * One reported condition, and the contact state each fault adapter publishes for it, in
+ * `FAULT_ADAPTERS` order. Exactly one adapter reads `CONTACT_NOT_DETECTED`.
+ */
 interface FaultCase {
   label: string;
   fault: Readonly<Record<string, boolean>>;
   offlineConfirmed: boolean;
-  activated: ServiceKind;
+  contactStates: readonly number[];
 }
 
 const FAULT_CASES: readonly FaultCase[] = [
-  { label: 'a primary pump fault', fault: { ...CLEAR_FAULTS, primaryPumpFault: true }, offlineConfirmed: false, activated: 'primary-pump-fault' },
-  { label: 'a backup pump fault', fault: { ...CLEAR_FAULTS, backupPumpFault: true }, offlineConfirmed: false, activated: 'backup-pump-fault' },
-  { label: 'a blown backup pump fuse', fault: { ...CLEAR_FAULTS, backupPumpFuseBlown: true }, offlineConfirmed: false, activated: 'backup-pump-fault' },
-  { label: 'a water sensor fault', fault: { ...CLEAR_FAULTS, waterSensorFault: true }, offlineConfirmed: false, activated: 'water-sensor-fault' },
+  {
+    label: 'a primary pump fault',
+    fault: { ...clearFaults(), primaryPumpFault: true },
+    offlineConfirmed: false,
+    contactStates: [CONTACT_NOT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED],
+  },
+  {
+    label: 'a backup pump fault',
+    fault: { ...clearFaults(), backupPumpFault: true },
+    offlineConfirmed: false,
+    contactStates: [CONTACT_DETECTED, CONTACT_NOT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED],
+  },
+  {
+    label: 'a blown backup pump fuse',
+    fault: { ...clearFaults(), backupPumpFuseBlown: true },
+    offlineConfirmed: false,
+    contactStates: [CONTACT_DETECTED, CONTACT_NOT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED],
+  },
+  {
+    label: 'a water sensor fault',
+    fault: { ...clearFaults(), waterSensorFault: true },
+    offlineConfirmed: false,
+    contactStates: [CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_NOT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED],
+  },
   {
     label: 'a lost controller link',
-    fault: { ...CLEAR_FAULTS, controllerLinkPresent: false },
+    fault: { ...clearFaults(), controllerLinkPresent: false },
     offlineConfirmed: false,
-    activated: 'pump-controller-link-lost',
+    contactStates: [CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_NOT_DETECTED, CONTACT_DETECTED],
   },
-  { label: 'a confirmed offline run', fault: CLEAR_FAULTS, offlineConfirmed: true, activated: 'basement-guardian-offline' },
+  {
+    label: 'a confirmed offline run',
+    fault: clearFaults(),
+    offlineConfirmed: true,
+    contactStates: [CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_NOT_DETECTED],
+  },
 ];
 
 /** One legal water-level code, the percentage it publishes, and the flood verdict it carries. */
@@ -154,17 +195,23 @@ void ({ scope: 'power', toleratedDistrust: [] } satisfies RowTrust);
 void ({ toleratedDistrust: [] } satisfies RowTrust);
 // @ts-expect-error a projected value names the characteristic that carries it
 void ({ value: true } satisfies ProjectedValue);
+void ({
+  decoded: {},
+  untrustedScopes: [],
+  offlineConfirmed: false,
+  controllerDataLastTrustedAt: '',
+  pendingControls: new Set<DeviceCapability>(),
+} satisfies ProjectionInput);
 // @ts-expect-error a projection reads the offline confirmation the accessory counted
-void ({ decoded: {}, untrustedScopes: [], controllerDataLastTrustedAt: '' } satisfies ProjectionInput);
+void ({ decoded: {}, untrustedScopes: [], controllerDataLastTrustedAt: '', pendingControls: new Set<DeviceCapability>() } satisfies ProjectionInput);
 
-// The stand-ins answer the members the plugin reads and nothing else, which no structural type can
-// express; the widening is what lets each stand where the plugin takes the real object.
+// The stand-ins, widened where the plugin takes the real namespace and accessory.
 function hapNamespace(): API['hap'] {
-  return createFakeHap() as unknown as API['hap'];
+  return asHapNamespace(createFakeHap());
 }
 
 function accessoryStandIn(): PlatformAccessory {
-  return createFakeAccessory(ACCESSORY_NAME, ACCESSORY_UUID) as unknown as PlatformAccessory;
+  return asPlatformAccessory(createFakeAccessory(ACCESSORY_NAME, ACCESSORY_UUID));
 }
 
 // One decoded battery group, carrying both the exact vendor codes and the two values the family
@@ -178,14 +225,29 @@ function batteryGroup(overrides: Readonly<Record<string, unknown>> = {}): Record
 function decodedState(overrides: Readonly<Record<string, unknown>> = {}): Record<string, unknown> {
   return {
     water: { levelCode: 1, levelPercent: 20, flooded: false },
-    pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined, testRunning: false },
+    pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined },
     power: { mainsPresent: true },
     battery: batteryGroup(),
-    fault: { ...CLEAR_FAULTS },
+    fault: clearFaults(),
     connectivity: { reportedOffline: false },
     'self-test': { running: false, testedAt: undefined },
     'alarm-mute': { muted: false },
     ...overrides,
+  };
+}
+
+// Every decoded group but `water` reporting its active condition: every equipment fault, a lost
+// controller link, both pumps running, mains lost, a low battery, a self-test running, the alarm
+// muted, and the device reporting itself offline.
+function everyOtherConditionActive(): Record<string, unknown> {
+  return {
+    pump: { primaryRunning: true, backupRunning: true, backupActivatedAt: 1_700_000_000 },
+    power: { mainsPresent: false },
+    battery: batteryGroup({ charging: false, voltageLow: true, healthCode: 1, protectionHoursCode: 1, levelPercent: 25, low: true }),
+    fault: { primaryPumpFault: true, backupPumpFault: true, backupPumpFuseBlown: true, waterSensorFault: true, controllerLinkPresent: false },
+    connectivity: { reportedOffline: true },
+    'self-test': { running: true, testedAt: 1_700_000_000 },
+    'alarm-mute': { muted: true },
   };
 }
 
@@ -315,7 +377,7 @@ function unprojectedRequiredCharacteristics(hap: API['hap'], rows: readonly Serv
   ];
   const drifted = rows.flatMap((row) =>
     inputs.flatMap((input) => {
-      const projected = new Set(row.project(input).map((value) => value.characteristic.UUID));
+      const projected = new Set(row.project(input).map((projectedValue) => projectedValue.characteristic.UUID));
 
       if (projected.size === 0) {
         return [];
@@ -368,18 +430,6 @@ function registerWaterCases(): void {
       // assert
       assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.LeakDetected.UUID, value: leak }]);
     });
-
-    test(`publishes an integer water level for code ${String(levelCode)}`, () => {
-      // arrange
-      const hap = hapNamespace();
-      const row = rowOf(hap, 'sump-pit-level');
-
-      // act
-      const projected = row.project(projectionInput({ decoded: decodedState({ water: { levelCode, levelPercent, flooded } }) }));
-
-      // assert
-      assert.strictEqual(Number.isInteger(valueOf(projected, hap.Characteristic.WaterLevel)), true);
-    });
   }
 
   test('reports a flooding pit at exactly one legal water level code', () => {
@@ -401,6 +451,40 @@ function registerWaterCases(): void {
     );
   });
 
+  // The water group below sits on no ladder rung: code 31 is the flooding rung, but the family
+  // reported 20 per cent. A row that derived the percentage from the code would publish 100.
+  test('publishes the decoded water level as reported rather than the ladder rung of its raw code', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { RawWaterLevelCode, WaterSensorFaultReported } = createCustomCharacteristics(hap);
+    const row = rowOf(hap, 'sump-pit-level');
+
+    // act
+    const projected = row.project(projectionInput({ decoded: decodedState({ water: { levelCode: 31, levelPercent: 20, flooded: false } }) }));
+
+    // assert
+    assert.deepStrictEqual(summarise(projected), [
+      { uuid: hap.Characteristic.WaterLevel.UUID, value: 20 },
+      { uuid: RawWaterLevelCode.UUID, value: 31 },
+      { uuid: WaterSensorFaultReported.UUID, value: false },
+      { uuid: hap.Characteristic.StatusFault.UUID, value: NO_FAULT },
+    ]);
+  });
+
+  // The water group below sits on no ladder rung: the family reported a flood at code 1 and 20 per
+  // cent. A row that derived the verdict from the code or the percentage would publish no leak.
+  test('reports the decoded flood verdict as reported rather than deriving it from the water level', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row = rowOf(hap, 'sump-pit-flood');
+
+    // act
+    const projected = row.project(projectionInput({ decoded: decodedState({ water: { levelCode: 1, levelPercent: 20, flooded: true } }) }));
+
+    // assert
+    assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.LeakDetected.UUID, value: LEAK_DETECTED }]);
+  });
+
   test('keeps publishing a trustworthy water level while the fault scope is untrusted', () => {
     // arrange
     const hap = hapNamespace();
@@ -418,11 +502,14 @@ function registerWaterCases(): void {
     ]);
   });
 
-  for (const waterSensorFault of [true, false]) {
+  for (const { waterSensorFault, statusFault } of [
+    { waterSensorFault: true, statusFault: GENERAL_FAULT },
+    { waterSensorFault: false, statusFault: NO_FAULT },
+  ]) {
     test(`faults the pit level service from a reported water sensor fault of ${String(waterSensorFault)}`, () => {
       // arrange
       const hap = hapNamespace();
-      const { WaterSensorFaultReported } = createCustomCharacteristics(hap);
+      const { RawWaterLevelCode, WaterSensorFaultReported } = createCustomCharacteristics(hap);
       const decoded = decodedState({ fault: { waterSensorFault } });
       const row = rowOf(hap, 'sump-pit-level');
 
@@ -430,20 +517,115 @@ function registerWaterCases(): void {
       const projected = row.project(projectionInput({ decoded }));
 
       // assert
-      assert.deepStrictEqual(
-        {
-          reported: valueOf(projected, WaterSensorFaultReported),
-          fault: valueOf(projected, hap.Characteristic.StatusFault),
-        },
-        { reported: waterSensorFault, fault: waterSensorFault ? GENERAL_FAULT : NO_FAULT },
-      );
+      assert.deepStrictEqual(summarise(projected), [
+        { uuid: hap.Characteristic.WaterLevel.UUID, value: 20 },
+        { uuid: RawWaterLevelCode.UUID, value: 1 },
+        { uuid: WaterSensorFaultReported.UUID, value: waterSensorFault },
+        { uuid: hap.Characteristic.StatusFault.UUID, value: statusFault },
+      ]);
+    });
+  }
+
+  // The flood verdict reads the decoded `water` group alone. A reported water sensor fault does not
+  // put that verdict in doubt, and a backup run does not establish a flood, so no other group's
+  // active condition moves the flood sensor off what the water group reports.
+  for (const { label, water, groups, offlineConfirmed, leak } of [
+    {
+      label: 'a reported water sensor fault',
+      water: { levelCode: 1, levelPercent: 20, flooded: false },
+      groups: { fault: { ...clearFaults(), waterSensorFault: true } },
+      offlineConfirmed: false,
+      leak: LEAK_NOT_DETECTED,
+    },
+    {
+      label: 'a reported water sensor fault',
+      water: { levelCode: 31, levelPercent: 100, flooded: true },
+      groups: { fault: { ...clearFaults(), waterSensorFault: true } },
+      offlineConfirmed: false,
+      leak: LEAK_DETECTED,
+    },
+    {
+      label: 'a backup pump run',
+      water: { levelCode: 1, levelPercent: 20, flooded: false },
+      groups: { pump: { primaryRunning: false, backupRunning: true, backupActivatedAt: 1_700_000_000 } },
+      offlineConfirmed: false,
+      leak: LEAK_NOT_DETECTED,
+    },
+    {
+      label: 'a backup pump run',
+      water: { levelCode: 31, levelPercent: 100, flooded: true },
+      groups: { pump: { primaryRunning: false, backupRunning: true, backupActivatedAt: 1_700_000_000 } },
+      offlineConfirmed: false,
+      leak: LEAK_DETECTED,
+    },
+    {
+      label: 'every other active condition',
+      water: { levelCode: 1, levelPercent: 20, flooded: false },
+      groups: everyOtherConditionActive(),
+      offlineConfirmed: true,
+      leak: LEAK_NOT_DETECTED,
+    },
+    {
+      label: 'every other active condition',
+      water: { levelCode: 31, levelPercent: 100, flooded: true },
+      groups: everyOtherConditionActive(),
+      offlineConfirmed: true,
+      leak: LEAK_DETECTED,
+    },
+  ]) {
+    test(`reports a decoded flood verdict of ${String(water.flooded)} unchanged beside ${label}`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const row = rowOf(hap, 'sump-pit-flood');
+      const input = projectionInput({ decoded: decodedState({ ...groups, water }), offlineConfirmed });
+
+      // act
+      const projected = row.project(input);
+
+      // assert
+      assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.LeakDetected.UUID, value: leak }]);
+    });
+  }
+
+  // The level and its raw code read the decoded `water` group alone, so they publish beside the
+  // fault-sourced values whatever any other group reports.
+  for (const { label, groups, offlineConfirmed, reported, status } of [
+    {
+      label: 'a backup pump run',
+      groups: { pump: { primaryRunning: false, backupRunning: true, backupActivatedAt: 1_700_000_000 } },
+      offlineConfirmed: false,
+      reported: false,
+      status: NO_FAULT,
+    },
+    { label: 'every other active condition', groups: everyOtherConditionActive(), offlineConfirmed: true, reported: true, status: GENERAL_FAULT },
+  ]) {
+    test(`publishes the reported pit level and its fault values beside ${label}`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const { RawWaterLevelCode, WaterSensorFaultReported } = createCustomCharacteristics(hap);
+      const row = rowOf(hap, 'sump-pit-level');
+      const input = projectionInput({ decoded: decodedState({ ...groups, water: { levelCode: 1, levelPercent: 20, flooded: false } }), offlineConfirmed });
+
+      // act
+      const projected = row.project(input);
+
+      // assert
+      assert.deepStrictEqual(summarise(projected), [
+        { uuid: hap.Characteristic.WaterLevel.UUID, value: 20 },
+        { uuid: RawWaterLevelCode.UUID, value: 1 },
+        { uuid: WaterSensorFaultReported.UUID, value: reported },
+        { uuid: hap.Characteristic.StatusFault.UUID, value: status },
+      ]);
     });
   }
 }
 
 // Every case about the two pump services and the two live activity adapters.
 function registerPumpCases(): void {
-  for (const primaryRunning of [true, false]) {
+  for (const { primaryRunning, contactState } of [
+    { primaryRunning: true, contactState: CONTACT_NOT_DETECTED },
+    { primaryRunning: false, contactState: CONTACT_DETECTED },
+  ]) {
     test(`publishes the reported primary pump running state of ${String(primaryRunning)} on both primary rows`, () => {
       // arrange
       const hap = hapNamespace();
@@ -459,12 +641,50 @@ function registerPumpCases(): void {
           running: valueOf(projected.pump, PumpRunning),
           adapter: valueOf(projected.adapter, hap.Characteristic.ContactSensorState),
         },
-        { running: primaryRunning, adapter: primaryRunning ? CONTACT_NOT_DETECTED : CONTACT_DETECTED },
+        { running: primaryRunning, adapter: contactState },
       );
     });
   }
 
-  for (const primaryPumpFault of [true, false]) {
+  // The two pumps run in opposite states here. A backup row that reads the primary pump's running
+  // fact, or both pumps' facts, then publishes a state the backup pump did not report.
+  for (const { primaryRunning, backupRunning, pumpRunning, contactState } of [
+    { primaryRunning: false, backupRunning: true, pumpRunning: true, contactState: CONTACT_NOT_DETECTED },
+    { primaryRunning: true, backupRunning: false, pumpRunning: false, contactState: CONTACT_DETECTED },
+  ]) {
+    test(`publishes the reported backup pump running state of ${String(backupRunning)} on both backup rows`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const { PumpRunning, PumpFault, PumpFuseBlown, ObservationStartedAt, ObservedActivationCount, LastObservedActivationAt } =
+        createCustomCharacteristics(hap);
+      const input = projectionInput({ decoded: decodedState({ pump: { primaryRunning, backupRunning } }) });
+
+      // act
+      const projected = {
+        pump: summarise(rowOf(hap, 'backup-pump').project(input)),
+        adapter: summarise(rowOf(hap, 'backup-pump-running').project(input)),
+      };
+
+      // assert
+      assert.deepStrictEqual(projected, {
+        pump: [
+          { uuid: PumpRunning.UUID, value: pumpRunning },
+          { uuid: PumpFault.UUID, value: false },
+          { uuid: PumpFuseBlown.UUID, value: false },
+          { uuid: hap.Characteristic.StatusFault.UUID, value: NO_FAULT },
+          { uuid: ObservationStartedAt.UUID, value: OBSERVATION_START },
+          { uuid: ObservedActivationCount.UUID, value: 0 },
+          { uuid: LastObservedActivationAt.UUID, value: '' },
+        ],
+        adapter: [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: contactState }],
+      });
+    });
+  }
+
+  for (const { primaryPumpFault, status } of [
+    { primaryPumpFault: true, status: GENERAL_FAULT },
+    { primaryPumpFault: false, status: NO_FAULT },
+  ]) {
     test(`faults the primary pump service from a reported primary pump fault of ${String(primaryPumpFault)}`, () => {
       // arrange
       const hap = hapNamespace();
@@ -481,7 +701,7 @@ function registerPumpCases(): void {
           fuseBlown: valueOf(projected, PumpFuseBlown),
           status: valueOf(projected, hap.Characteristic.StatusFault),
         },
-        { fault: primaryPumpFault, fuseBlown: undefined, status: primaryPumpFault ? GENERAL_FAULT : NO_FAULT },
+        { fault: primaryPumpFault, fuseBlown: undefined, status },
       );
     });
   }
@@ -529,17 +749,47 @@ function registerPumpCases(): void {
     );
   });
 
+  // The device reports a self-test in the `self-test` group, not in the `pump` group.
   for (const testRunning of [true, false]) {
     test(`activates the backup pump adapter during a self-test run of ${String(testRunning)}`, () => {
       // arrange
       const hap = hapNamespace();
-      const input = projectionInput({ decoded: decodedState({ pump: { primaryRunning: false, backupRunning: true, testRunning } }) });
+      const decoded = decodedState({ pump: { primaryRunning: false, backupRunning: true }, 'self-test': { running: testRunning, testedAt: undefined } });
+      const input = projectionInput({ decoded });
 
       // act
       const projected = rowOf(hap, 'backup-pump-running').project(input);
 
       // assert
       assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: CONTACT_NOT_DETECTED }]);
+    });
+  }
+
+  // A self-test runs the backup pump, but the test itself never moves an activity adapter. Each
+  // adapter stays where its own running boolean puts it while a test is in progress (C-001).
+  for (const { primaryRunning, backupRunning, primaryState, backupState } of [
+    { primaryRunning: false, backupRunning: false, primaryState: CONTACT_DETECTED, backupState: CONTACT_DETECTED },
+    { primaryRunning: false, backupRunning: true, primaryState: CONTACT_DETECTED, backupState: CONTACT_NOT_DETECTED },
+    { primaryRunning: true, backupRunning: false, primaryState: CONTACT_NOT_DETECTED, backupState: CONTACT_DETECTED },
+    { primaryRunning: true, backupRunning: true, primaryState: CONTACT_NOT_DETECTED, backupState: CONTACT_NOT_DETECTED },
+  ]) {
+    test(`follows primary running ${String(primaryRunning)} and backup running ${String(backupRunning)} on both activity adapters during a self-test`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const decoded = decodedState({ pump: { primaryRunning, backupRunning }, 'self-test': { running: true, testedAt: undefined } });
+      const input = projectionInput({ decoded });
+
+      // act
+      const projected = {
+        primary: summarise(rowOf(hap, 'primary-pump-running').project(input)),
+        backup: summarise(rowOf(hap, 'backup-pump-running').project(input)),
+      };
+
+      // assert
+      assert.deepStrictEqual(projected, {
+        primary: [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: primaryState }],
+        backup: [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: backupState }],
+      });
     });
   }
 
@@ -561,9 +811,9 @@ function registerPumpCases(): void {
     // arrange
     const hap = hapNamespace();
     const decoded = decodedState({
-      pump: { primaryRunning: true, backupRunning: false },
-      power: { mainsPresent: false },
-      fault: { primaryPumpFault: true, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: true, controllerLinkPresent: true },
+      ...everyOtherConditionActive(),
+      water: { levelCode: 31, levelPercent: 100, flooded: true },
+      pump: { primaryRunning: true, backupRunning: false, backupActivatedAt: 1_700_000_000 },
     });
 
     // act
@@ -619,7 +869,7 @@ function registerPumpRecordCases(): void {
 
     // assert
     assert.deepStrictEqual(
-      summarise(projected).filter((value) => value.uuid === LastActivationWasTestActivity.UUID),
+      summarise(projected).filter((published) => published.uuid === LastActivationWasTestActivity.UUID),
       [],
     );
   });
@@ -636,7 +886,7 @@ function registerPumpRecordCases(): void {
 
       // assert
       assert.deepStrictEqual(
-        summarise(projected).filter((value) => value.uuid === LastActivationWasTestActivity.UUID),
+        summarise(projected).filter((published) => published.uuid === LastActivationWasTestActivity.UUID),
         [{ uuid: LastActivationWasTestActivity.UUID, value: lastActivationWasTestActivity }],
       );
     });
@@ -655,7 +905,7 @@ function registerPumpRecordCases(): void {
 
     // assert
     assert.deepStrictEqual(
-      summarise(projected).filter((value) => value.uuid === LastActivationWasTestActivity.UUID),
+      summarise(projected).filter((published) => published.uuid === LastActivationWasTestActivity.UUID),
       [],
     );
   });
@@ -674,7 +924,7 @@ function registerPumpRecordCases(): void {
 
       // assert
       assert.deepStrictEqual(
-        summarise(projected).filter((value) => value.uuid === LastObservedActivationAt.UUID),
+        summarise(projected).filter((published) => published.uuid === LastObservedActivationAt.UUID),
         [{ uuid: LastObservedActivationAt.UUID, value: '' }],
       );
     });
@@ -689,15 +939,15 @@ function registerPumpRecordCases(): void {
 
     // act
     const publishing = createServiceCatalogue(hap)
-      .filter((row) => row.project(input).some((value) => recordUuids.has(value.characteristic.UUID)))
+      .filter((row) => row.project(input).some((projectedValue) => recordUuids.has(projectedValue.characteristic.UUID)))
       .map((row) => row.displayName);
 
     // assert
     assert.deepStrictEqual(publishing, ['Primary Pump', 'Backup Pump']);
   });
 
-  // The record is additional and displaces nothing, so the live values each pump row published
-  // before it existed are compared against an inline list rather than against the row's own answer.
+  // The record is additional and displaces nothing, so the live pump and fault values are compared
+  // against an inline list rather than against the row's own answer.
   test('keeps publishing the live pump and fault values beside the record on both pump rows', () => {
     // arrange
     const hap = hapNamespace();
@@ -705,14 +955,14 @@ function registerPumpRecordCases(): void {
     const live = new Set([PumpRunning.UUID, PumpFault.UUID, PumpFuseBlown.UUID, hap.Characteristic.StatusFault.UUID]);
     const decoded = decodedState({
       pump: { primaryRunning: true, backupRunning: true },
-      fault: { ...CLEAR_FAULTS, primaryPumpFault: true, backupPumpFuseBlown: true },
+      fault: { ...clearFaults(), primaryPumpFault: true, backupPumpFuseBlown: true },
     });
     const input = projectionInput({ decoded });
 
     // act
     const projected = {
-      primary: summarise(rowOf(hap, 'primary-pump').project(input)).filter((value) => live.has(value.uuid)),
-      backup: summarise(rowOf(hap, 'backup-pump').project(input)).filter((value) => live.has(value.uuid)),
+      primary: summarise(rowOf(hap, 'primary-pump').project(input)).filter((published) => live.has(published.uuid)),
+      backup: summarise(rowOf(hap, 'backup-pump').project(input)).filter((published) => live.has(published.uuid)),
     };
 
     // assert
@@ -749,8 +999,8 @@ function registerPumpRecordCases(): void {
 
     // act
     const projected = {
-      primary: summarise(rowOf(hap, 'primary-pump').project(input)).filter((value) => recordUuids.has(value.uuid)),
-      backup: summarise(rowOf(hap, 'backup-pump').project(input)).filter((value) => recordUuids.has(value.uuid)),
+      primary: summarise(rowOf(hap, 'primary-pump').project(input)).filter((published) => recordUuids.has(published.uuid)),
+      backup: summarise(rowOf(hap, 'backup-pump').project(input)).filter((published) => recordUuids.has(published.uuid)),
     };
 
     // assert
@@ -790,7 +1040,10 @@ function registerPumpRecordCases(): void {
 
 // Every case about mains power at the controller and the adapter that follows it.
 function registerPowerCases(): void {
-  for (const mainsPresent of [true, false]) {
+  for (const { mainsPresent, contactState } of [
+    { mainsPresent: true, contactState: CONTACT_DETECTED },
+    { mainsPresent: false, contactState: CONTACT_NOT_DETECTED },
+  ]) {
     test(`projects the reported ac_power ${String(mainsPresent)} verbatim onto Mains Power Present`, () => {
       // arrange
       const hap = hapNamespace();
@@ -814,7 +1067,7 @@ function registerPowerCases(): void {
 
       // assert
       assert.deepStrictEqual(summarise(projected), [
-        { uuid: hap.Characteristic.ContactSensorState.UUID, value: mainsPresent ? CONTACT_DETECTED : CONTACT_NOT_DETECTED },
+        { uuid: hap.Characteristic.ContactSensorState.UUID, value: contactState },
         { uuid: hap.Characteristic.StatusFault.UUID, value: NO_FAULT },
       ]);
     });
@@ -823,8 +1076,8 @@ function registerPowerCases(): void {
 
 // Every case about the standard battery service and the exact vendor codes beside it.
 function registerBatteryCases(): void {
-  for (const { healthCode, voltageLow, low } of BATTERY_READINGS) {
-    test(`reports the backup battery as ${low ? 'low' : 'normal'} for health code ${String(healthCode)} with a low voltage of ${String(voltageLow)}`, () => {
+  for (const { healthCode, voltageLow, low, verdict, status } of BATTERY_READINGS) {
+    test(`reports the backup battery as ${verdict} for health code ${String(healthCode)} with a low voltage of ${String(voltageLow)}`, () => {
       // arrange
       const hap = hapNamespace();
       const { BatteryHealthCode, BatteryVoltageLow } = createCustomCharacteristics(hap);
@@ -840,7 +1093,7 @@ function registerBatteryCases(): void {
           health: valueOf(projected.facts, BatteryHealthCode),
           voltage: valueOf(projected.facts, BatteryVoltageLow),
         },
-        { status: low ? BATTERY_LEVEL_LOW : BATTERY_LEVEL_NORMAL, health: healthCode, voltage: voltageLow },
+        { status, health: healthCode, voltage: voltageLow },
       );
     });
   }
@@ -880,7 +1133,76 @@ function registerBatteryCases(): void {
     );
   });
 
-  for (const charging of [true, false]) {
+  // The battery groups below break the `D-07` rule on purpose: each decoded verdict is the opposite
+  // of the verdict its health code and low voltage give. A row that derived the verdict from those
+  // codes would publish the other status.
+  for (const { healthCode, voltageLow, low, status } of [
+    { healthCode: 8, voltageLow: false, low: true, status: BATTERY_LEVEL_LOW },
+    { healthCode: 1, voltageLow: true, low: false, status: BATTERY_LEVEL_NORMAL },
+  ]) {
+    test(`reports a decoded low verdict ${String(low)}, not one derived from health code ${String(healthCode)} and low voltage ${String(voltageLow)}`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const { BatteryCharging, BatteryVoltageLow, BatteryHealthCode, ProtectionHoursCode } = createCustomCharacteristics(hap);
+      const input = projectionInput({ decoded: decodedState({ battery: batteryGroup({ healthCode, voltageLow, low }) }) });
+
+      // act
+      const projected = {
+        battery: summarise(rowNamed(hap, 'Backup Battery Level').project(input)),
+        facts: summarise(rowNamed(hap, 'Backup Battery').project(input)),
+      };
+
+      // assert
+      assert.deepStrictEqual(projected, {
+        battery: [
+          { uuid: hap.Characteristic.StatusLowBattery.UUID, value: status },
+          { uuid: hap.Characteristic.BatteryLevel.UUID, value: 100 },
+          { uuid: hap.Characteristic.ChargingState.UUID, value: CHARGING },
+        ],
+        facts: [
+          { uuid: BatteryCharging.UUID, value: true },
+          { uuid: BatteryVoltageLow.UUID, value: voltageLow },
+          { uuid: BatteryHealthCode.UUID, value: healthCode },
+          { uuid: ProtectionHoursCode.UUID, value: 8 },
+        ],
+      });
+    });
+  }
+
+  // The battery group below sits on no protection band: code 8 is the 100 per cent band, but the
+  // family reported 25 per cent. A row that derived the level from the code would publish 100.
+  test('publishes the decoded battery level as reported rather than the band of its protection hours code', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { BatteryCharging, BatteryVoltageLow, BatteryHealthCode, ProtectionHoursCode } = createCustomCharacteristics(hap);
+    const input = projectionInput({ decoded: decodedState({ battery: batteryGroup({ protectionHoursCode: 8, levelPercent: 25 }) }) });
+
+    // act
+    const projected = {
+      battery: summarise(rowNamed(hap, 'Backup Battery Level').project(input)),
+      facts: summarise(rowNamed(hap, 'Backup Battery').project(input)),
+    };
+
+    // assert
+    assert.deepStrictEqual(projected, {
+      battery: [
+        { uuid: hap.Characteristic.StatusLowBattery.UUID, value: BATTERY_LEVEL_NORMAL },
+        { uuid: hap.Characteristic.BatteryLevel.UUID, value: 25 },
+        { uuid: hap.Characteristic.ChargingState.UUID, value: CHARGING },
+      ],
+      facts: [
+        { uuid: BatteryCharging.UUID, value: true },
+        { uuid: BatteryVoltageLow.UUID, value: false },
+        { uuid: BatteryHealthCode.UUID, value: 8 },
+        { uuid: ProtectionHoursCode.UUID, value: 8 },
+      ],
+    });
+  });
+
+  for (const { charging, chargingState } of [
+    { charging: true, chargingState: CHARGING },
+    { charging: false, chargingState: NOT_CHARGING },
+  ]) {
     test(`reports the backup battery charging state of ${String(charging)} on both battery rows`, () => {
       // arrange
       const hap = hapNamespace();
@@ -893,7 +1215,7 @@ function registerBatteryCases(): void {
       // assert
       assert.deepStrictEqual(
         { state: valueOf(projected.battery, hap.Characteristic.ChargingState), reported: valueOf(projected.facts, BatteryCharging) },
-        { state: charging ? CHARGING : NOT_CHARGING, reported: charging },
+        { state: chargingState, reported: charging },
       );
     });
   }
@@ -919,7 +1241,7 @@ function registerBatteryCases(): void {
 
 // Every case about the five equipment-fault adapters transitioning independently.
 function registerFaultAdapterCases(): void {
-  for (const { label, fault, offlineConfirmed, activated } of FAULT_CASES) {
+  for (const { label, fault, offlineConfirmed, contactStates } of FAULT_CASES) {
     test(`activates one fault adapter alone for ${label}`, () => {
       // arrange
       const hap = hapNamespace();
@@ -929,21 +1251,18 @@ function registerFaultAdapterCases(): void {
       const states = FAULT_ADAPTERS.map((kind) => valueOf(rowOf(hap, kind).project(input), hap.Characteristic.ContactSensorState));
 
       // assert
-      assert.deepStrictEqual(
-        states,
-        FAULT_ADAPTERS.map((kind) => (kind === activated ? CONTACT_NOT_DETECTED : CONTACT_DETECTED)),
-      );
+      assert.deepStrictEqual(states, contactStates);
     });
   }
 
-  for (const { primaryPumpFault, waterSensorFault } of [
-    { primaryPumpFault: true, waterSensorFault: false },
-    { primaryPumpFault: false, waterSensorFault: true },
+  for (const { primaryPumpFault, waterSensorFault, primaryStatus, waterStatus } of [
+    { primaryPumpFault: true, waterSensorFault: false, primaryStatus: GENERAL_FAULT, waterStatus: NO_FAULT },
+    { primaryPumpFault: false, waterSensorFault: true, primaryStatus: NO_FAULT, waterStatus: GENERAL_FAULT },
   ]) {
     test(`faults the adapter service alongside its contact state, given a primary pump fault of ${String(primaryPumpFault)}`, () => {
       // arrange
       const hap = hapNamespace();
-      const input = projectionInput({ decoded: decodedState({ fault: { ...CLEAR_FAULTS, primaryPumpFault, waterSensorFault } }) });
+      const input = projectionInput({ decoded: decodedState({ fault: { ...clearFaults(), primaryPumpFault, waterSensorFault } }) });
 
       // act
       const projected = { primary: rowOf(hap, 'primary-pump-fault').project(input), water: rowOf(hap, 'water-sensor-fault').project(input) };
@@ -954,7 +1273,7 @@ function registerFaultAdapterCases(): void {
           primary: valueOf(projected.primary, hap.Characteristic.StatusFault),
           water: valueOf(projected.water, hap.Characteristic.StatusFault),
         },
-        { primary: primaryPumpFault ? GENERAL_FAULT : NO_FAULT, water: waterSensorFault ? GENERAL_FAULT : NO_FAULT },
+        { primary: primaryStatus, water: waterStatus },
       );
     });
   }
@@ -964,7 +1283,7 @@ function registerFaultAdapterCases(): void {
     const hap = hapNamespace();
     const { ControllerLinkPresent, ControllerDataLastTrustedAt } = createCustomCharacteristics(hap);
     const input = projectionInput({
-      decoded: decodedState({ fault: { ...CLEAR_FAULTS, controllerLinkPresent: false } }),
+      decoded: decodedState({ fault: { ...clearFaults(), controllerLinkPresent: false } }),
       untrustedScopes: [{ scope: 'fault', reason: 'controller-link-lost', lastTrustedAt: 1_700_000_000_000 }],
       controllerDataLastTrustedAt: '2026-08-30T15:00:00Z',
     });
@@ -985,7 +1304,7 @@ function registerFaultAdapterCases(): void {
     // arrange
     const hap = hapNamespace();
     const input = projectionInput({
-      decoded: decodedState({ fault: { ...CLEAR_FAULTS, controllerLinkPresent: false } }),
+      decoded: decodedState({ fault: { ...clearFaults(), controllerLinkPresent: false } }),
       untrustedScopes: [{ scope: 'fault', reason: 'controller-link-lost', lastTrustedAt: 1_700_000_000_000 }],
     });
     const downstream: readonly ServiceKind[] = ['primary-pump-fault', 'backup-pump-fault', 'water-sensor-fault'];
@@ -1033,7 +1352,10 @@ function registerFaultAdapterCases(): void {
 
 // Every case about the confirmed-offline adapter.
 function registerOfflineCases(): void {
-  for (const offlineConfirmed of [true, false]) {
+  for (const { offlineConfirmed, contactState } of [
+    { offlineConfirmed: true, contactState: CONTACT_NOT_DETECTED },
+    { offlineConfirmed: false, contactState: CONTACT_DETECTED },
+  ]) {
     test(`activates Basement Guardian Offline from a confirmed offline run of ${String(offlineConfirmed)}`, () => {
       // arrange
       const hap = hapNamespace();
@@ -1043,25 +1365,95 @@ function registerOfflineCases(): void {
       const projected = row.project(projectionInput({ offlineConfirmed }));
 
       // assert
-      assert.deepStrictEqual(summarise(projected), [
-        { uuid: hap.Characteristic.ContactSensorState.UUID, value: offlineConfirmed ? CONTACT_NOT_DETECTED : CONTACT_DETECTED },
-      ]);
+      assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: contactState }]);
+    });
+  }
+
+  // `reportedOffline` is what the device says about itself. An alert raised from it would fire on a
+  // transport hiccup, so only the run the accessory confirmed activates the adapter (RES-03, D-016).
+  test('activates no Basement Guardian Offline contact from the device reporting itself offline alone', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row = rowOf(hap, 'basement-guardian-offline');
+    const input = projectionInput({ decoded: decodedState({ connectivity: { reportedOffline: true } }), offlineConfirmed: false });
+
+    // act
+    const projected = row.project(input);
+
+    // assert
+    assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: CONTACT_DETECTED }]);
+  });
+
+  // An accessory whose family stops resolving projects every row with no decoded state and every
+  // other scope distrusted. The offline row reads the accessory's own confirmation count, so it
+  // keeps publishing that verdict, and a device that then goes offline still raises the alert
+  // (RES-03).
+  for (const { offlineConfirmed, contactState } of [
+    { offlineConfirmed: true, contactState: CONTACT_NOT_DETECTED },
+    { offlineConfirmed: false, contactState: CONTACT_DETECTED },
+  ]) {
+    test(`projects Basement Guardian Offline from a confirmed offline run of ${String(offlineConfirmed)} while no decoded state exists`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const row = rowOf(hap, 'basement-guardian-offline');
+      const input = projectionInput({
+        decoded: undefined,
+        untrustedScopes: [
+          { scope: 'water', reason: 'invalid', lastTrustedAt: undefined },
+          { scope: 'pump', reason: 'invalid', lastTrustedAt: undefined },
+          { scope: 'power', reason: 'invalid', lastTrustedAt: undefined },
+          { scope: 'battery', reason: 'invalid', lastTrustedAt: undefined },
+          { scope: 'fault', reason: 'invalid', lastTrustedAt: undefined },
+          { scope: 'self-test', reason: 'invalid', lastTrustedAt: undefined },
+          { scope: 'alarm-mute', reason: 'invalid', lastTrustedAt: undefined },
+        ],
+        offlineConfirmed,
+      });
+
+      // act
+      const projected = row.project(input);
+
+      // assert
+      assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: contactState }]);
     });
   }
 }
 
-// Every case about a group that did not decode and a scope that is not trustworthy.
+// Every case about a group that did not decode, a scope that is not trustworthy, and the `On` value
+// a control row projects with or without a pending request.
 function registerAbsentStateCases(): void {
   for (const { label, decoded } of [
     { label: 'a decoded state that is not a record', decoded: null },
     { label: 'a decoded state that is an array', decoded: [] },
     { label: 'a decoded state carrying no group at all', decoded: {} },
-    { label: 'a group that did not decode', decoded: { water: undefined, pump: undefined, power: undefined, fault: undefined } },
-    { label: 'a group that is not a record', decoded: { water: 'absent', pump: 'absent', power: 'absent', fault: 'absent' } },
-    { label: 'a group carrying none of its facts', decoded: { water: {}, pump: {}, power: {}, fault: {} } },
+    {
+      label: 'a group that did not decode',
+      decoded: {
+        water: undefined,
+        pump: undefined,
+        power: undefined,
+        battery: undefined,
+        fault: undefined,
+        'self-test': undefined,
+        'alarm-mute': undefined,
+      },
+    },
+    {
+      label: 'a group that is not a record',
+      decoded: { water: 'absent', pump: 'absent', power: 'absent', battery: 'absent', fault: 'absent', 'self-test': 'absent', 'alarm-mute': 'absent' },
+    },
+    { label: 'a group carrying none of its facts', decoded: { water: {}, pump: {}, power: {}, battery: {}, fault: {}, 'self-test': {}, 'alarm-mute': {} } },
     {
       label: 'facts of the wrong type',
-      decoded: { water: { levelCode: '1', levelPercent: '20', flooded: 'no' }, pump: { primaryRunning: 'yes' }, power: { mainsPresent: 'yes' } },
+      decoded: {
+        water: { levelCode: '1', levelPercent: '20', flooded: 'no' },
+        pump: { primaryRunning: 'yes', backupRunning: 'no' },
+        power: { mainsPresent: 'yes' },
+        battery: { low: 'no', levelPercent: '100', charging: 'yes', voltageLow: 'no', healthCode: '8', protectionHoursCode: '8' },
+        fault: { primaryPumpFault: 'no', backupPumpFault: 'no', backupPumpFuseBlown: 'no', waterSensorFault: 'no', controllerLinkPresent: 'yes' },
+        'self-test': { running: 'no' },
+        'alarm-mute': { muted: 'no' },
+      },
     },
   ]) {
     test(`projects nothing on any decoded-state row from ${label}`, () => {
@@ -1393,40 +1785,6 @@ describe('createServiceCatalogue', () => {
     );
   });
 
-  test('adds the control service even when the row projects nothing, and adds no sensor service on the same terms', () => {
-    // arrange
-    const hap = hapNamespace();
-    const accessory = accessoryStandIn();
-    const control = rowOf(hap, 'system-self-test');
-    const sensor = rowOf(hap, 'sump-pit-flood');
-
-    // act
-    const added = { control: ensureService(accessory, control, []), sensor: ensureService(accessory, sensor, []) };
-
-    // assert
-    assert.deepStrictEqual({ control: added.control?.UUID, sensor: added.sensor }, { control: hap.Service.Switch.UUID, sensor: undefined });
-  });
-
-  test('answers the same row order whatever the input carries', () => {
-    // arrange
-    const hap = hapNamespace();
-    const catalogue = createServiceCatalogue(hap);
-    const input = projectionInput({ decoded: {}, untrustedScopes: [{ scope: 'water', reason: 'invalid', lastTrustedAt: 1 }], offlineConfirmed: true });
-
-    // act
-    const kinds = catalogue.map((row) => {
-      row.project(input);
-
-      return row.kind;
-    });
-
-    // assert
-    assert.deepStrictEqual(
-      kinds,
-      createServiceCatalogue(hap).map((row) => row.kind),
-    );
-  });
-
   test('projects the same values twice from one input', () => {
     // arrange
     const hap = hapNamespace();
@@ -1463,8 +1821,11 @@ describe('createServiceCatalogue', () => {
     // arrange
     const hap = hapNamespace();
 
-    // act & assert
-    assert.deepStrictEqual(unprojectedRequiredCharacteristics(hap, createServiceCatalogue(hap)), []);
+    // act
+    const unprojected = unprojectedRequiredCharacteristics(hap, createServiceCatalogue(hap));
+
+    // assert
+    assert.deepStrictEqual(unprojected, []);
   });
 
   // The negative control for the case above. A row whose service class requires a characteristic it
@@ -1475,127 +1836,20 @@ describe('createServiceCatalogue', () => {
     const hap = hapNamespace();
     const drifted: ServiceRow = { ...rowOf(hap, 'mains-power-lost'), serviceClass: createCustomServices(hap).SumpPitService };
 
-    // act & assert
-    assert.deepStrictEqual(unprojectedRequiredCharacteristics(hap, [drifted]), [
+    // act
+    const unprojected = unprojectedRequiredCharacteristics(hap, [drifted]);
+
+    // assert
+    assert.deepStrictEqual(unprojected, [
       'Mains Power Lost adds a service without publishing Water Level',
       'Mains Power Lost adds a service without publishing Raw Water Level Code',
     ]);
   });
 
-  test('reads the water level meaning from decoded state rather than from the level ladder', async () => {
-    // act
-    const source = await sourceOf('serviceCatalogue.ts');
-
-    // assert
-    assert.strictEqual(source.includes('waterLevel.js'), false);
-  });
-});
-
-// The one structural narrowing of a decoded scope group, which the accessory reads through rather
-// than repeating. Two narrowings can disagree about the same payload, and a row would then publish
-// a value the accessory's own observation never saw (D-003).
-describe('decodedGroup', () => {
-  test('answers the group a decoded state carries for the scope asked for', () => {
-    // act & assert
-    assert.deepStrictEqual(decodedGroup({ pump: { primaryRunning: true }, water: { levelCode: 1 } }, 'pump'), { primaryRunning: true });
-  });
-
-  for (const { label, decoded } of [
-    { label: 'a decoded state that is not a record', decoded: null },
-    { label: 'a decoded state that is an array', decoded: [] },
-    { label: 'a decoded state carrying no such group', decoded: {} },
-    { label: 'a group that did not decode', decoded: { pump: undefined } },
-    { label: 'a group that is not a record', decoded: { pump: 'absent' } },
-  ]) {
-    test(`answers nothing for ${label}`, () => {
-      // act & assert
-      assert.strictEqual(decodedGroup(decoded, 'pump'), undefined);
-    });
-  }
-});
-
-describe('booleanOf', () => {
-  test('answers a decoded boolean field', () => {
-    // act & assert
-    assert.strictEqual(booleanOf({ primaryRunning: false }, 'primaryRunning'), false);
-  });
-
-  for (const { label, group } of [
-    { label: 'a group that did not decode', group: undefined },
-    { label: 'a group carrying no such field', group: {} },
-    { label: 'a field of the wrong type', group: { primaryRunning: 'yes' } },
-  ]) {
-    test(`answers nothing for ${label}`, () => {
-      // act & assert
-      assert.strictEqual(booleanOf(group, 'primaryRunning'), undefined);
-    });
-  }
-});
-
-describe('numberOf', () => {
-  test('answers a decoded number field', () => {
-    // act & assert
-    assert.strictEqual(numberOf({ backupActivatedAt: 1_700_000_000 }, 'backupActivatedAt'), 1_700_000_000);
-  });
-
-  for (const { label, group } of [
-    { label: 'a group that did not decode', group: undefined },
-    { label: 'a group carrying no such field', group: {} },
-    { label: 'a field of the wrong type', group: { backupActivatedAt: '1700000000' } },
-  ]) {
-    test(`answers nothing for ${label}`, () => {
-      // act & assert
-      assert.strictEqual(numberOf(group, 'backupActivatedAt'), undefined);
-    });
-  }
-});
-
-describe('isRowTrusted', () => {
-  test('trusts a row whose scope carries no distrust at all', () => {
-    // act & assert
-    assert.strictEqual(isRowTrusted({ scope: 'power', toleratedDistrust: [] }, []), true);
-  });
-
-  test('trusts a row through the one distrust reason it tolerates, and still projects its values', () => {
-    // arrange
-    const hap = hapNamespace();
-    const { MainsPowerPresent } = createCustomCharacteristics(hap);
-    const row: ServiceRow = { ...rowOf(hap, 'sump-mains-power'), toleratedDistrust: ['controller-link-lost'] };
-    const input = projectionInput({ untrustedScopes: [{ scope: 'power', reason: 'controller-link-lost', lastTrustedAt: 7 }] });
-
-    // act
-    const trusted = isRowTrusted(row, input.untrustedScopes);
-
-    // assert
-    assert.strictEqual(trusted, true);
-    assert.deepStrictEqual(summarise(row.project(input)), [{ uuid: MainsPowerPresent.UUID, value: true }]);
-  });
-
-  test('distrusts the same row for a reason it does not tolerate, and projects nothing', () => {
-    // arrange
-    const hap = hapNamespace();
-    const row: ServiceRow = { ...rowOf(hap, 'sump-mains-power'), toleratedDistrust: ['controller-link-lost'] };
-    const input = projectionInput({ untrustedScopes: [{ scope: 'power', reason: 'stale', lastTrustedAt: 7 }] });
-
-    // act
-    const trusted = isRowTrusted(row, input.untrustedScopes);
-
-    // assert
-    assert.strictEqual(trusted, false);
-    assert.deepStrictEqual(row.project(input), []);
-  });
-
-  test('trusts a row while a different scope is untrusted', () => {
-    // act & assert
-    assert.strictEqual(isRowTrusted({ scope: 'connectivity', toleratedDistrust: [] }, [{ scope: 'power', reason: 'invalid', lastTrustedAt: 1 }]), true);
-  });
-});
-
-describe('isRowPublishable', () => {
   // The reading an owner acts on, delivered by the transport that is still working while the other
   // one went quiet. Withholding it leaves Apple Home drawing "no leak" over a plugin holding "leak",
   // with nothing on the tile to say otherwise, and no automation fires (CR-01, D-014, D-02).
-  test('publishes a flooded pit whose scope the plugin can no longer watch, and stops vouching for it', () => {
+  test('publishes a flooded pit whose scope the plugin can no longer watch', () => {
     // arrange
     const hap = hapNamespace();
     const row = rowOf(hap, 'sump-pit-flood');
@@ -1605,30 +1859,11 @@ describe('isRowPublishable', () => {
     });
 
     // act
-    const tile = { leak: valueOf(row.project(input), hap.Characteristic.LeakDetected), active: isRowFullyTrusted(row, input.untrustedScopes) };
+    const leak = valueOf(row.project(input), hap.Characteristic.LeakDetected);
 
     // assert
-    assert.deepStrictEqual(tile, { leak: LEAK_DETECTED, active: false });
+    assert.strictEqual(leak, LEAK_DETECTED);
   });
-
-  // The two predicates answer different questions, and this is where they part. Publishing asks
-  // whether pushing what arrived would overwrite a good value with a doubtful one; vouching asks
-  // whether the plugin can still call the value current. Only a monitoring outage answers no to the
-  // second and yes to the first, so `stale`, which nothing assigns, publishes nothing either.
-  for (const reason of ['invalid', 'controller-link-lost', 'unreachable', 'stale'] as const) {
-    test(`publishes a scope untrusted for ${reason} only while the value itself is not in doubt, and vouches for it either way`, () => {
-      // arrange
-      const hap = hapNamespace();
-      const row = rowOf(hap, 'sump-pit-flood');
-      const untrustedScopes = [{ scope: 'water' as const, reason, lastTrustedAt: 7 }];
-
-      // act & assert
-      assert.deepStrictEqual(
-        { publishable: isRowPublishable(row, untrustedScopes), active: isRowFullyTrusted(row, untrustedScopes) },
-        { publishable: reason === 'unreachable', active: false },
-      );
-    });
-  }
 
   test('publishes nothing for a scope whose own field failed family validation', () => {
     // arrange
@@ -1639,8 +1874,11 @@ describe('isRowPublishable', () => {
       untrustedScopes: [{ scope: 'water', reason: 'invalid', lastTrustedAt: 7 }],
     });
 
-    // act & assert
-    assert.deepStrictEqual(row.project(input), []);
+    // act
+    const projected = row.project(input);
+
+    // assert
+    assert.deepStrictEqual(projected, []);
   });
 
   test('publishes nothing for a scope a lost controller link poisoned', () => {
@@ -1649,8 +1887,11 @@ describe('isRowPublishable', () => {
     const row = rowOf(hap, 'sump-mains-power');
     const input = projectionInput({ untrustedScopes: [{ scope: 'power', reason: 'controller-link-lost', lastTrustedAt: 7 }] });
 
-    // act & assert
-    assert.deepStrictEqual(row.project(input), []);
+    // act
+    const projected = row.project(input);
+
+    // assert
+    assert.deepStrictEqual(projected, []);
   });
 
   test('publishes through a lost controller link for the one row that tolerates it', () => {
@@ -1659,7 +1900,7 @@ describe('isRowPublishable', () => {
     const { ControllerLinkPresent } = createCustomCharacteristics(hap);
     const row = rowOf(hap, 'pump-controller-link-lost');
     const input = projectionInput({
-      decoded: decodedState({ fault: { ...CLEAR_FAULTS, controllerLinkPresent: false } }),
+      decoded: decodedState({ fault: { ...clearFaults(), controllerLinkPresent: false } }),
       untrustedScopes: [{ scope: 'fault', reason: 'controller-link-lost', lastTrustedAt: 7 }],
     });
 
@@ -1684,90 +1925,243 @@ describe('isRowPublishable', () => {
       ],
     });
 
-    // act & assert
-    assert.deepStrictEqual(row.project(input), []);
+    // act
+    const projected = row.project(input);
+
+    // assert
+    assert.deepStrictEqual(projected, []);
   });
 
   // A row reading a second scope group answers the same question once per group, so an outage on the
   // second group keeps its values flowing while a validation failure on it still withholds them.
-  for (const { reason, waterSensorFault, statusFault } of [
-    { reason: 'unreachable' as const, waterSensorFault: false, statusFault: NO_FAULT },
-    { reason: 'invalid' as const, waterSensorFault: undefined, statusFault: undefined },
-  ]) {
-    test(`publishes the second scope group a row reads while that scope is untrusted for ${reason}`, () => {
-      // arrange
-      const hap = hapNamespace();
-      const { WaterSensorFaultReported } = createCustomCharacteristics(hap);
-      const row = rowOf(hap, 'sump-pit-level');
-      const input = projectionInput({ untrustedScopes: [{ scope: 'fault', reason, lastTrustedAt: 7 }] });
+  test('keeps publishing the second scope group a row reads through an outage on that scope', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { WaterSensorFaultReported } = createCustomCharacteristics(hap);
+    const row = rowOf(hap, 'sump-pit-level');
+    const input = projectionInput({ untrustedScopes: [{ scope: 'fault', reason: 'unreachable', lastTrustedAt: 7 }] });
 
-      // act
-      const projected = row.project(input);
+    // act
+    const projected = row.project(input);
 
-      // assert
-      assert.deepStrictEqual(
-        {
-          level: valueOf(projected, hap.Characteristic.WaterLevel),
-          fault: valueOf(projected, WaterSensorFaultReported),
-          status: valueOf(projected, hap.Characteristic.StatusFault),
-          active: isRowFullyTrusted(row, input.untrustedScopes),
-        },
-        { level: 20, fault: waterSensorFault, status: statusFault, active: false },
-      );
-    });
-  }
+    // assert
+    assert.deepStrictEqual(
+      {
+        level: valueOf(projected, hap.Characteristic.WaterLevel),
+        fault: valueOf(projected, WaterSensorFaultReported),
+        status: valueOf(projected, hap.Characteristic.StatusFault),
+      },
+      { level: 20, fault: false, status: NO_FAULT },
+    );
+  });
 
-  test('publishes and vouches for a row nothing untrusts', () => {
+  test('withholds the second scope group a row reads while that scope fails validation', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { WaterSensorFaultReported } = createCustomCharacteristics(hap);
+    const row = rowOf(hap, 'sump-pit-level');
+    const input = projectionInput({ untrustedScopes: [{ scope: 'fault', reason: 'invalid', lastTrustedAt: 7 }] });
+
+    // act
+    const projected = row.project(input);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        level: valueOf(projected, hap.Characteristic.WaterLevel),
+        fault: valueOf(projected, WaterSensorFaultReported),
+        status: valueOf(projected, hap.Characteristic.StatusFault),
+      },
+      { level: 20, fault: undefined, status: undefined },
+    );
+  });
+
+  test('publishes a row nothing untrusts', () => {
     // arrange
     const hap = hapNamespace();
     const row = rowOf(hap, 'sump-pit-flood');
     const input = projectionInput();
 
     // act
-    const tile = { leak: valueOf(row.project(input), hap.Characteristic.LeakDetected), active: isRowFullyTrusted(row, input.untrustedScopes) };
+    const leak = valueOf(row.project(input), hap.Characteristic.LeakDetected);
 
     // assert
-    assert.deepStrictEqual(tile, { leak: LEAK_NOT_DETECTED, active: true });
+    assert.strictEqual(leak, LEAK_NOT_DETECTED);
   });
 
   // A blackout marks; it raises no alarm. Both safety adapters derive their activation from a value
   // the last trustworthy observation produced rather than from the trust state, so an outage that
   // said nothing about the controller link and nothing about the device leaves both quiet (D-016,
   // RES-03).
-  for (const { displayName, kind } of [
-    { displayName: 'Pump Controller Link Lost', kind: 'pump-controller-link-lost' as const },
-    { displayName: 'Basement Guardian Offline', kind: 'basement-guardian-offline' as const },
-  ]) {
-    test(`activates no ${displayName} contact for a monitoring outage the last snapshot said nothing about`, () => {
-      // arrange
-      const hap = hapNamespace();
-      const row = rowOf(hap, kind);
-      const input = projectionInput({ untrustedScopes: TRUST_SCOPES.map((scope) => ({ scope, reason: 'unreachable' as const, lastTrustedAt: 7 })) });
-
-      // act
-      const tile = { contact: valueOf(row.project(input), hap.Characteristic.ContactSensorState), active: isRowFullyTrusted(row, input.untrustedScopes) };
-
-      // assert
-      assert.deepStrictEqual(tile, { contact: CONTACT_DETECTED, active: false });
-    });
-  }
-
-  // The tile is on the accessory while the outage is in force rather than a poll later. A row that
-  // projected nothing would earn no service until trust returned, and at the longest configurable
-  // poll interval that is an hour of an absent sensor after the transport is back (WR-08).
-  test('earns its service from the poll that arrives during the outage', () => {
+  test('activates no Pump Controller Link Lost contact and raises no fault for a monitoring outage the last snapshot said nothing about', () => {
     // arrange
     const hap = hapNamespace();
-    const accessory = accessoryStandIn();
-    const row = rowOf(hap, 'sump-pit-flood');
-    const input = projectionInput({ untrustedScopes: [{ scope: 'water', reason: 'unreachable', lastTrustedAt: 7 }] });
+    const { ControllerLinkPresent, ControllerDataLastTrustedAt } = createCustomCharacteristics(hap);
+    const row = rowOf(hap, 'pump-controller-link-lost');
+    const input = projectionInput({ untrustedScopes: TRUST_SCOPES.map((scope) => ({ scope, reason: 'unreachable' as const, lastTrustedAt: 7 })) });
 
     // act
-    const service = ensureService(accessory, row, row.project(input));
+    const projected = row.project(input);
 
     // assert
-    assert.strictEqual(service?.displayName, 'Sump Pit Flood');
+    assert.deepStrictEqual(summarise(projected), [
+      { uuid: hap.Characteristic.ContactSensorState.UUID, value: CONTACT_DETECTED },
+      { uuid: hap.Characteristic.StatusFault.UUID, value: NO_FAULT },
+      { uuid: ControllerLinkPresent.UUID, value: true },
+      { uuid: ControllerDataLastTrustedAt.UUID, value: '' },
+    ]);
   });
+
+  test('activates no Basement Guardian Offline contact for a monitoring outage the last snapshot said nothing about', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row = rowOf(hap, 'basement-guardian-offline');
+    const input = projectionInput({ untrustedScopes: TRUST_SCOPES.map((scope) => ({ scope, reason: 'unreachable' as const, lastTrustedAt: 7 })) });
+
+    // act
+    const projected = row.project(input);
+
+    // assert
+    assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: CONTACT_DETECTED }]);
+  });
+
+  test('still projects the values of a one-scope row through the one distrust reason it tolerates', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { MainsPowerPresent } = createCustomCharacteristics(hap);
+    const row: ServiceRow = { ...rowOf(hap, 'sump-mains-power'), toleratedDistrust: ['controller-link-lost'] };
+    const input = projectionInput({ untrustedScopes: [{ scope: 'power', reason: 'controller-link-lost', lastTrustedAt: 7 }] });
+
+    // act
+    const projected = row.project(input);
+
+    // assert
+    assert.deepStrictEqual(summarise(projected), [{ uuid: MainsPowerPresent.UUID, value: true }]);
+  });
+
+  test('projects nothing on a one-scope row for a distrust reason it does not tolerate', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row: ServiceRow = { ...rowOf(hap, 'sump-mains-power'), toleratedDistrust: ['controller-link-lost'] };
+    const input = projectionInput({ untrustedScopes: [{ scope: 'power', reason: 'stale', lastTrustedAt: 7 }] });
+
+    // act
+    const projected = row.project(input);
+
+    // assert
+    assert.deepStrictEqual(projected, []);
+  });
+
+  test('imports nothing from the water level ladder module', async () => {
+    // act
+    const source = await sourceOf('serviceCatalogue.ts');
+
+    // assert
+    assert.strictEqual(source.includes('waterLevel.js'), false);
+  });
+});
+
+// The one structural narrowing of a decoded scope group, which the accessory reads through rather
+// than repeating. Two narrowings can disagree about the same payload, and a row would then publish
+// a value the accessory's own observation never saw (D-003).
+describe('decodedGroup', () => {
+  test('answers the group a decoded state carries for the scope asked for', () => {
+    // act
+    const group = decodedGroup({ pump: { primaryRunning: true }, water: { levelCode: 1 } }, 'pump');
+
+    // assert
+    assert.deepStrictEqual(group, { primaryRunning: true });
+  });
+
+  for (const { label, decoded } of [
+    { label: 'a decoded state that is not a record', decoded: null },
+    { label: 'a decoded state that is an array', decoded: [] },
+    { label: 'a decoded state carrying no such group', decoded: {} },
+    { label: 'a group that did not decode', decoded: { pump: undefined } },
+    { label: 'a group that is not a record', decoded: { pump: 'absent' } },
+  ]) {
+    test(`answers nothing for ${label}`, () => {
+      // act
+      const group = decodedGroup(decoded, 'pump');
+
+      // assert
+      assert.strictEqual(group, undefined);
+    });
+  }
+});
+
+describe('booleanOf', () => {
+  test('answers a decoded boolean field', () => {
+    // act
+    const primaryRunning = booleanOf({ primaryRunning: false }, 'primaryRunning');
+
+    // assert
+    assert.strictEqual(primaryRunning, false);
+  });
+
+  for (const { label, group } of [
+    { label: 'a group that did not decode', group: undefined },
+    { label: 'a group carrying no such field', group: {} },
+    { label: 'a field of the wrong type', group: { primaryRunning: 'yes' } },
+  ]) {
+    test(`answers nothing for ${label}`, () => {
+      // act
+      const primaryRunning = booleanOf(group, 'primaryRunning');
+
+      // assert
+      assert.strictEqual(primaryRunning, undefined);
+    });
+  }
+});
+
+describe('numberOf', () => {
+  test('answers a decoded number field', () => {
+    // act
+    const backupActivatedAt = numberOf({ backupActivatedAt: 1_700_000_000 }, 'backupActivatedAt');
+
+    // assert
+    assert.strictEqual(backupActivatedAt, 1_700_000_000);
+  });
+
+  for (const { label, group } of [
+    { label: 'a group that did not decode', group: undefined },
+    { label: 'a group carrying no such field', group: {} },
+    { label: 'a field of the wrong type', group: { backupActivatedAt: '1700000000' } },
+  ]) {
+    test(`answers nothing for ${label}`, () => {
+      // act
+      const backupActivatedAt = numberOf(group, 'backupActivatedAt');
+
+      // assert
+      assert.strictEqual(backupActivatedAt, undefined);
+    });
+  }
+});
+
+describe('isRowPublishable', () => {
+  // The two predicates answer different questions. Publishing asks whether pushing what arrived would
+  // overwrite a good value with a doubtful one; vouching, which `isRowFullyTrusted` answers, asks
+  // whether the plugin can still call the value current. Only a monitoring outage answers no to the
+  // second and yes to the first, so `stale`, which nothing assigns, publishes nothing either.
+  for (const { reason, publishes } of [
+    { reason: 'invalid', publishes: false },
+    { reason: 'controller-link-lost', publishes: false },
+    { reason: 'unreachable', publishes: true },
+    { reason: 'stale', publishes: false },
+  ] as const) {
+    test(`publishes a scope untrusted for ${reason} only while the value itself is not in doubt`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const row = rowOf(hap, 'sump-pit-flood');
+      const untrustedScopes = [{ scope: 'water' as const, reason, lastTrustedAt: 7 }];
+
+      // act
+      const publishable = isRowPublishable(row, untrustedScopes);
+
+      // assert
+      assert.strictEqual(publishable, publishes);
+    });
+  }
 });
 
 describe('isRowFullyTrusted', () => {
@@ -1775,17 +2169,22 @@ describe('isRowFullyTrusted', () => {
     // arrange
     const hap = hapNamespace();
 
-    // act & assert
-    assert.strictEqual(isRowFullyTrusted(rowOf(hap, 'primary-pump'), []), true);
+    // act
+    const trusted = isRowFullyTrusted(rowOf(hap, 'primary-pump'), []);
+
+    // assert
+    assert.strictEqual(trusted, true);
   });
 
   test('distrusts a two-scope row when the second scope it reads stops validating', () => {
     // arrange
     const hap = hapNamespace();
+    const row = rowOf(hap, 'primary-pump');
+    const ownScopeOnly: ServiceRow = { ...row, readScopes: ['pump'] };
     const untrustedScopes = [{ scope: 'fault' as const, reason: 'invalid' as const, lastTrustedAt: 7 }];
 
     // act
-    const trusted = { own: isRowTrusted(rowOf(hap, 'primary-pump'), untrustedScopes), every: isRowFullyTrusted(rowOf(hap, 'primary-pump'), untrustedScopes) };
+    const trusted = { own: isRowFullyTrusted(ownScopeOnly, untrustedScopes), every: isRowFullyTrusted(row, untrustedScopes) };
 
     // assert
     assert.deepStrictEqual(trusted, { own: true, every: false });
@@ -1796,16 +2195,155 @@ describe('isRowFullyTrusted', () => {
     const hap = hapNamespace();
     const row: ServiceRow = { ...rowOf(hap, 'primary-pump'), toleratedDistrust: ['controller-link-lost'] };
 
-    // act & assert
-    assert.strictEqual(isRowFullyTrusted(row, [{ scope: 'fault', reason: 'controller-link-lost', lastTrustedAt: 7 }]), true);
+    // act
+    const trusted = isRowFullyTrusted(row, [{ scope: 'fault', reason: 'controller-link-lost', lastTrustedAt: 7 }]);
+
+    // assert
+    assert.strictEqual(trusted, true);
   });
 
   test('distrusts a one-scope row when its own scope stops validating', () => {
     // arrange
     const hap = hapNamespace();
 
-    // act & assert
-    assert.strictEqual(isRowFullyTrusted(rowOf(hap, 'sump-mains-power'), [{ scope: 'power', reason: 'invalid', lastTrustedAt: 7 }]), false);
+    // act
+    const trusted = isRowFullyTrusted(rowOf(hap, 'sump-mains-power'), [{ scope: 'power', reason: 'invalid', lastTrustedAt: 7 }]);
+
+    // assert
+    assert.strictEqual(trusted, false);
+  });
+
+  test('trusts a one-scope row whose scope carries no distrust at all', () => {
+    // arrange
+    const hap = hapNamespace();
+
+    // act
+    const trusted = isRowFullyTrusted(rowOf(hap, 'sump-mains-power'), []);
+
+    // assert
+    assert.strictEqual(trusted, true);
+  });
+
+  test('trusts a one-scope row through the one distrust reason it tolerates', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row: ServiceRow = { ...rowOf(hap, 'sump-mains-power'), toleratedDistrust: ['controller-link-lost'] };
+    const input = projectionInput({ untrustedScopes: [{ scope: 'power', reason: 'controller-link-lost', lastTrustedAt: 7 }] });
+
+    // act
+    const trusted = isRowFullyTrusted(row, input.untrustedScopes);
+
+    // assert
+    assert.strictEqual(trusted, true);
+  });
+
+  test('distrusts a one-scope row for a reason it does not tolerate', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row: ServiceRow = { ...rowOf(hap, 'sump-mains-power'), toleratedDistrust: ['controller-link-lost'] };
+    const input = projectionInput({ untrustedScopes: [{ scope: 'power', reason: 'stale', lastTrustedAt: 7 }] });
+
+    // act
+    const trusted = isRowFullyTrusted(row, input.untrustedScopes);
+
+    // assert
+    assert.strictEqual(trusted, false);
+  });
+
+  test('trusts a one-scope row while a different scope is untrusted', () => {
+    // arrange
+    const hap = hapNamespace();
+
+    // act
+    const trusted = isRowFullyTrusted(rowOf(hap, 'basement-guardian-offline'), [{ scope: 'power', reason: 'invalid', lastTrustedAt: 1 }]);
+
+    // assert
+    assert.strictEqual(trusted, true);
+  });
+
+  test('stops vouching for a flooded pit whose scope the plugin can no longer watch', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row = rowOf(hap, 'sump-pit-flood');
+    const input = projectionInput({
+      decoded: decodedState({ water: { levelCode: 31, levelPercent: 100, flooded: true } }),
+      untrustedScopes: [{ scope: 'water', reason: 'unreachable', lastTrustedAt: 7 }],
+    });
+
+    // act
+    const trusted = isRowFullyTrusted(row, input.untrustedScopes);
+
+    // assert
+    assert.strictEqual(trusted, false);
+  });
+
+  for (const reason of ['invalid', 'controller-link-lost', 'unreachable', 'stale'] as const) {
+    test(`stops vouching for a scope untrusted for ${reason}`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const row = rowOf(hap, 'sump-pit-flood');
+      const untrustedScopes = [{ scope: 'water' as const, reason, lastTrustedAt: 7 }];
+
+      // act
+      const trusted = isRowFullyTrusted(row, untrustedScopes);
+
+      // assert
+      assert.strictEqual(trusted, false);
+    });
+  }
+
+  for (const reason of ['unreachable', 'invalid'] as const) {
+    test(`stops vouching for a row whose second scope group is untrusted for ${reason}`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const row = rowOf(hap, 'sump-pit-level');
+      const input = projectionInput({ untrustedScopes: [{ scope: 'fault', reason, lastTrustedAt: 7 }] });
+
+      // act
+      const trusted = isRowFullyTrusted(row, input.untrustedScopes);
+
+      // assert
+      assert.strictEqual(trusted, false);
+    });
+  }
+
+  test('vouches for a row nothing untrusts', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row = rowOf(hap, 'sump-pit-flood');
+    const input = projectionInput();
+
+    // act
+    const trusted = isRowFullyTrusted(row, input.untrustedScopes);
+
+    // assert
+    assert.strictEqual(trusted, true);
+  });
+
+  test('stops vouching for the Pump Controller Link Lost row during a monitoring outage', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row = rowOf(hap, 'pump-controller-link-lost');
+    const input = projectionInput({ untrustedScopes: TRUST_SCOPES.map((scope) => ({ scope, reason: 'unreachable' as const, lastTrustedAt: 7 })) });
+
+    // act
+    const trusted = isRowFullyTrusted(row, input.untrustedScopes);
+
+    // assert
+    assert.strictEqual(trusted, false);
+  });
+
+  test('stops vouching for the Basement Guardian Offline row during a monitoring outage', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row = rowOf(hap, 'basement-guardian-offline');
+    const input = projectionInput({ untrustedScopes: TRUST_SCOPES.map((scope) => ({ scope, reason: 'unreachable' as const, lastTrustedAt: 7 })) });
+
+    // act
+    const trusted = isRowFullyTrusted(row, input.untrustedScopes);
+
+    // assert
+    assert.strictEqual(trusted, false);
   });
 });
 
@@ -1815,8 +2353,11 @@ describe('publishedService', () => {
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
 
-    // act & assert
-    assert.strictEqual(publishedService(accessory, rowOf(hap, 'mains-power-lost')), undefined);
+    // act
+    const service = publishedService(accessory, rowOf(hap, 'mains-power-lost'));
+
+    // assert
+    assert.strictEqual(service, undefined);
   });
 
   test('answers the service the accessory already carries for the row', () => {
@@ -1826,8 +2367,11 @@ describe('publishedService', () => {
     const row = rowOf(hap, 'mains-power-lost');
     const added = addedService(accessory, hap, row);
 
-    // act & assert
-    assert.strictEqual(publishedService(accessory, row), added);
+    // act
+    const service = publishedService(accessory, row);
+
+    // assert
+    assert.strictEqual(service, added);
   });
 
   test('tells two rows of one subtype apart by their service type', () => {
@@ -1975,6 +2519,37 @@ describe('ensureService', () => {
       { battery: 'Backup Battery Level', facts: 'Backup Battery', distinct: true },
     );
   });
+
+  test('adds the control service even when the row projects nothing, and adds no sensor service on the same terms', () => {
+    // arrange
+    const hap = hapNamespace();
+    const accessory = accessoryStandIn();
+    const control = rowOf(hap, 'system-self-test');
+    const sensor = rowOf(hap, 'sump-pit-flood');
+
+    // act
+    const added = { control: ensureService(accessory, control, []), sensor: ensureService(accessory, sensor, []) };
+
+    // assert
+    assert.deepStrictEqual({ control: added.control?.UUID, sensor: added.sensor }, { control: hap.Service.Switch.UUID, sensor: undefined });
+  });
+
+  // The tile is on the accessory while the outage is in force rather than a poll later. A row that
+  // projected nothing would earn no service until trust returned, and at the longest configurable
+  // poll interval that is an hour of an absent sensor after the transport is back (WR-08).
+  test('earns its service from the poll that arrives during the outage', () => {
+    // arrange
+    const hap = hapNamespace();
+    const accessory = accessoryStandIn();
+    const row = rowOf(hap, 'sump-pit-flood');
+    const input = projectionInput({ untrustedScopes: [{ scope: 'water', reason: 'unreachable', lastTrustedAt: 7 }] });
+
+    // act
+    const service = ensureService(accessory, row, row.project(input));
+
+    // assert
+    assert.strictEqual(service?.displayName, 'Sump Pit Flood');
+  });
 });
 
 describe('removeServiceIfPresent', () => {
@@ -2103,12 +2678,12 @@ describe('publishValue', () => {
 // What a characteristic holds after a push, and what a controller read of it answers. The read is
 // the whole difference between unreadable and merely marked, so it is driven rather than inferred
 // from the stored status.
-function readOf(service: Service, characteristic: CharacteristicClass): { value: unknown; statusCode: number; threw: unknown } {
+async function readOf(service: Service, characteristic: CharacteristicClass): Promise<{ value: unknown; statusCode: number; threw: unknown }> {
   const held = service.getCharacteristic(characteristic);
   let threw: unknown = undefined;
 
   try {
-    void held.handleGetRequest();
+    await held.handleGetRequest();
   } catch (error: unknown) {
     threw = error;
   }
@@ -2127,7 +2702,7 @@ void (new Error('no caller may publish this') satisfies Parameters<typeof publis
 describe('publishPersistentFailure', () => {
   // The standard Battery service declares neither status characteristic, so it is the row whose push
   // has to declare the characteristic before it can carry a status at all.
-  test('declares an undeclared characteristic and makes it answer the pushed status', () => {
+  test('declares an undeclared characteristic and makes it answer the pushed status', async () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
@@ -2139,7 +2714,7 @@ describe('publishPersistentFailure', () => {
     // assert
     assert.deepStrictEqual(
       {
-        ...readOf(service, hap.Characteristic.StatusActive),
+        ...(await readOf(service, hap.Characteristic.StatusActive)),
         declared: service.optionalCharacteristics.filter((declared) => declared.UUID === hap.Characteristic.StatusActive.UUID).length,
       },
       {
@@ -2155,7 +2730,7 @@ describe('publishPersistentFailure', () => {
   // that erased the reading could not answer `true` here by accident. This is preserve-and-mark at
   // its strongest form: the tile is unreadable and still carries the last thing the plugin vouched
   // for (RES-04, D-10, D-014).
-  test('makes a read throw the pushed status and leaves the value the plugin last published', () => {
+  test('makes a read throw the pushed status and leaves the value the plugin last published', async () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
@@ -2166,7 +2741,7 @@ describe('publishPersistentFailure', () => {
     publishPersistentFailure(hap, service, hap.Characteristic.StatusActive, hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 
     // assert
-    assert.deepStrictEqual(readOf(service, hap.Characteristic.StatusActive), {
+    assert.deepStrictEqual(await readOf(service, hap.Characteristic.StatusActive), {
       value: true,
       statusCode: hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE,
       threw: hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE,
@@ -2175,7 +2750,7 @@ describe('publishPersistentFailure', () => {
 
   // Only the characteristic it was handed becomes unreadable. Every other reading on the same
   // service is still there and still answers, which is what bounds one push to one row.
-  test('leaves every other characteristic on the service readable and holding its value', () => {
+  test('leaves every other characteristic on the service readable and holding its value', async () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
@@ -2186,12 +2761,12 @@ describe('publishPersistentFailure', () => {
     publishPersistentFailure(hap, service, hap.Characteristic.StatusActive, hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 
     // assert
-    assert.deepStrictEqual(readOf(service, hap.Characteristic.BatteryLevel), { value: 80, statusCode: hap.HAPStatus.SUCCESS, threw: undefined });
+    assert.deepStrictEqual(await readOf(service, hap.Characteristic.BatteryLevel), { value: 80, statusCode: hap.HAPStatus.SUCCESS, threw: undefined });
   });
 
   // Nothing has to undo the status deliberately, and that is exactly why the platform pushes the
   // error after its boolean fan-out rather than before it.
-  test('returns the characteristic to readable on the next ordinary push', () => {
+  test('returns the characteristic to readable on the next ordinary push', async () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
@@ -2203,7 +2778,7 @@ describe('publishPersistentFailure', () => {
     publishValue(service, hap.Characteristic.StatusActive, false);
 
     // assert
-    assert.deepStrictEqual(readOf(service, hap.Characteristic.StatusActive), { value: false, statusCode: hap.HAPStatus.SUCCESS, threw: undefined });
+    assert.deepStrictEqual(await readOf(service, hap.Characteristic.StatusActive), { value: false, statusCode: hap.HAPStatus.SUCCESS, threw: undefined });
   });
 });
 

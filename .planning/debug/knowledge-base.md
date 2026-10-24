@@ -1,3 +1,9 @@
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-10-13
+  status: unknown
+---
+
 # GSD Debug Knowledge Base
 
 Resolved debug sessions. Used by `gsd-debugger` to surface known-pattern hypotheses at the start of new investigations.
@@ -20,5 +26,17 @@ Resolved debug sessions. Used by `gsd-debugger` to surface known-pattern hypothe
 2. **Run the feasibility probe on every supported configuration, not just the failing one.** The first chosen fix (userland Agent as `init.dispatcher` on the built-in fetch) probed green on Node 26 and would have caused total loss of function on Node 22 and 24. Probing all three majors falsified it before it shipped.
 3. **An implicit runtime default is a hidden dependency on the runtime's version.** `fetch()` with no dispatcher silently inherits whatever the bundled undici decided this major; state the requirement explicitly instead.
 4. **`\b` treats `_` as a word character.** A word-boundary regex intended to de-noise a substring scan silently missed `SENTRY_DSN`; verify a boundary change against the real spellings it must still catch, or it weakens the gate it was meant to sharpen.
+
+---
+
+## invalid-restored-pump-record — corrupt numeric cache resumed as trusted pump history
+
+- **Date:** 2026-10-19
+- **Error patterns:** negative activation count, fractional count, unsafe integer count, out-of-range timestamp, RangeError, restored pump record
+- **Root cause(s):** A malformed cached number passed the restore guards. These guards checked only its JavaScript type and exposed the record as trusted.
+- **Fix:** The guards accept only nonnegative safe counts and finite times within the Date range. They scale device seconds before checking them. An invalid member starts a new observation epoch.
+- **Files changed:** src/accessories/pumpRecords.ts, test/accessories/pumpRecords.test.ts
+- **Why not caught:** The owner tests covered wrong field types but did not cover invalid numbers in restored records.
+- **Recurrence guard:** The damaged-record rows in `test/accessories/pumpRecords.test.ts:842-905` cover invalid counts and times. The exact Date-limit test covers the valid boundary.
 
 ---

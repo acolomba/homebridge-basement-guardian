@@ -1,0 +1,88 @@
+{
+  "findingId": "CR-06-CONFIG_PROTOCOL-008",
+  "command": "node --test --test-reporter=tap --test-name-pattern='refuses an account email with an edge hyphen in its domain' dist-test/test/config.test.js",
+  "argv": [
+    "node",
+    "--test",
+    "--test-reporter=tap",
+    "--test-name-pattern=refuses an account email with an edge hyphen in its domain",
+    "dist-test/test/config.test.js"
+  ],
+  "cwd": "/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian",
+  "sourceCommit": "e2110784652049c384c3379975237ea90a14054c",
+  "sourceBlob": "3ca9d869135814a500512dc24da1d724377eaec8",
+  "nodeVersion": "v26.12.0",
+  "startedAt": "2026-10-19T13:30:02.247Z",
+  "finishedAt": "2026-10-19T13:30:02.569Z",
+  "exitCode": 1,
+  "output": "TAP version 13\n# Subtest: refuses an account email with an edge hyphen in its domain\nnot ok 1 - refuses an account email with an edge hyphen in its domain\n  ---\n  duration_ms: 2.002167\n  type: 'test'\n  location: '/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/dist-test/test/config.test.js:113:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    \n      {\n    +   config: {\n    +     clientId: '6QsGT46CLgeTRGbDDGUwSANLPRA4n5Zs',\n    +     email: 'user@-example.test',\n    +     ignoredFaults: [],\n    +     name: 'Basement Guardian',\n    +     offlineConfirmationPollCount: 2,\n    +     password: 'account-password',\n    +     pollIntervalSeconds: 900\n    +   },\n    +   ok: true\n    -   ok: false,\n    -   reason: 'the account email must be an email address.'\n      }\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected:\n    ok: false\n    reason: 'the account email must be an email address.'\n  actual:\n    ok: true\n    config:\n      name: 'Basement Guardian'\n      email: 'user@-example.test'\n      password: 'account-password'\n      clientId: '6QsGT46CLgeTRGbDDGUwSANLPRA4n5Zs'\n      pollIntervalSeconds: 900\n      offlineConfirmationPollCount: 2\n      ignoredFaults:\n  operator: 'deepStrictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/dist-test/test/config.test.js:119:12)\n    Test.runInAsyncScope (node:async_hooks:226:14)\n    Test.run (node:internal/test_runner/test:1402:25)\n    Test.start (node:internal/test_runner/test:1262:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 135.062041\n",
+  "targetTest": "refuses an account email with an edge hyphen in its domain",
+  "targetFile": "test/config.test.ts",
+  "expected": "{ ok: false, reason: 'the account email must be an email address.' }",
+  "actual": "{ ok: true, config: { email: 'user@-example.test', ...resolved settings } }",
+  "regressionPatch": "diff --git a/test/config.test.ts b/test/config.test.ts\nindex f744932..6e19830 100644\n--- a/test/config.test.ts\n+++ b/test/config.test.ts\n@@ -144,6 +144,17 @@ test('refuses an account email with consecutive domain dots', () => {\n   assert.deepStrictEqual(configResult, expectedRefusal);\n });\n \n+test('refuses an account email with an edge hyphen in its domain', () => {\n+  // arrange\n+  const expectedRefusal: ConfigRefused = { ok: false, reason: MALFORMED_EMAIL_REFUSAL };\n+\n+  // act\n+  const configResult = validateConfig(accountConfig({ email: 'user@-example.test' }));\n+\n+  // assert\n+  assert.deepStrictEqual(configResult, expectedRefusal);\n+});\n+\n test('CONF-05 reports the first failing field in a fixed order when several fields are wrong', () => {\n   // arrange\n   const expectedRefusal: ConfigRefused = { ok: false, reason: MALFORMED_EMAIL_REFUSAL };\n",
+  "semanticAssessment": "The active named owner test executed against unchanged src/config.ts and failed at its exact deepStrictEqual refusal assertion. Runtime validation accepted a synthetic address with a leading hyphen in a domain label; this is the intended behavior failure, not a compile, setup, import, or runner failure.",
+  "productionUnchanged": true,
+  "compileCommand": "npm run build:test",
+  "compileExitCode": 0,
+  "priorEvidence": [
+    {
+      "findingId": "CR-06-CONFIG_PROTOCOL-002",
+      "command": "node --test --test-reporter=tap --test-name-pattern='refuses an account email with consecutive domain dots' dist-test/test/config.test.js",
+      "argv": [
+        "node",
+        "--test",
+        "--test-reporter=tap",
+        "--test-name-pattern=refuses an account email with consecutive domain dots",
+        "dist-test/test/config.test.js"
+      ],
+      "cwd": "/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian",
+      "sourceCommit": "5dd9bbc59f7077cfdffe067a2122fdc9d639bed4",
+      "sourceBlob": "1f008b842845340cd140cb190d523ea51e117f22",
+      "nodeVersion": "v26.12.0",
+      "startedAt": "2026-10-19T13:18:13.104Z",
+      "finishedAt": "2026-10-19T13:18:13.456Z",
+      "exitCode": 1,
+      "output": "TAP version 13\n# Subtest: refuses an account email with consecutive domain dots\nnot ok 1 - refuses an account email with consecutive domain dots\n  ---\n  duration_ms: 2.115167\n  type: 'test'\n  location: '/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/dist-test/test/config.test.js:90:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    \n      {\n    +   config: {\n    +     clientId: '6QsGT46CLgeTRGbDDGUwSANLPRA4n5Zs',\n    +     email: 'user@example..test',\n    +     ignoredFaults: [],\n    +     name: 'Basement Guardian',\n    +     offlineConfirmationPollCount: 2,\n    +     password: 'account-password',\n    +     pollIntervalSeconds: 900\n    +   },\n    +   ok: true\n    -   ok: false,\n    -   reason: 'the account email must be an email address.'\n      }\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected:\n    ok: false\n    reason: 'the account email must be an email address.'\n  actual:\n    ok: true\n    config:\n      name: 'Basement Guardian'\n      email: 'user@example..test'\n      password: 'account-password'\n      clientId: '6QsGT46CLgeTRGbDDGUwSANLPRA4n5Zs'\n      pollIntervalSeconds: 900\n      offlineConfirmationPollCount: 2\n      ignoredFaults:\n  operator: 'deepStrictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/dist-test/test/config.test.js:96:12)\n    Test.runInAsyncScope (node:async_hooks:226:14)\n    Test.run (node:internal/test_runner/test:1402:25)\n    Test.start (node:internal/test_runner/test:1262:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 154.79025\n",
+      "targetTest": "refuses an account email with consecutive domain dots",
+      "targetFile": "test/config.test.ts",
+      "expected": "{ ok: false, reason: 'the account email must be an email address.' }",
+      "actual": "{ ok: true, config: { email: 'user@example..test', ...resolved settings } }",
+      "regressionPatch": "diff --git a/test/config.test.ts b/test/config.test.ts\nindex 0bbaf5d..e49333e 100644\n--- a/test/config.test.ts\n+++ b/test/config.test.ts\n@@ -115,6 +115,17 @@ for (const email of ['user@example', 'user@.test', 'user@example.', '@example.te\n   });\n }\n \n+test('refuses an account email with consecutive domain dots', () => {\n+  // arrange\n+  const expectedRefusal: ConfigRefused = { ok: false, reason: MALFORMED_EMAIL_REFUSAL };\n+\n+  // act\n+  const configResult = validateConfig(accountConfig({ email: 'user@example..test' }));\n+\n+  // assert\n+  assert.deepStrictEqual(configResult, expectedRefusal);\n+});\n+\n test('CONF-05 reports the first failing field in a fixed order when several fields are wrong', () => {\n   // arrange\n   const expectedRefusal: ConfigRefused = { ok: false, reason: MALFORMED_EMAIL_REFUSAL };\n",
+      "semanticAssessment": "The active named owner test executed against unchanged src/config.ts and failed at its exact deepStrictEqual refusal assertion. Runtime validation accepted a synthetic email address with consecutive domain dots; this is the intended behavior failure, not a compile, setup, import, or runner failure.",
+      "productionUnchanged": true,
+      "compileCommand": "npm run build:test",
+      "compileExitCode": 0,
+      "priorEvidence": [
+        {
+          "findingId": "CR-06-CONFIG_PROTOCOL-001",
+          "command": "node --test --test-reporter=tap --test-name-pattern='keeps a private value out of a poll interval refusal' dist-test/test/config.test.js",
+          "argv": [
+            "node",
+            "--test",
+            "--test-reporter=tap",
+            "--test-name-pattern=keeps a private value out of a poll interval refusal",
+            "dist-test/test/config.test.js"
+          ],
+          "cwd": "/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian",
+          "sourceCommit": "d2ab800c973556503339f03904256c8a38a45cfd",
+          "sourceBlob": "b8407fb8eea0469ba27609369cb838bc8d044abf",
+          "nodeVersion": "v26.12.0",
+          "startedAt": "2026-10-19T13:14:03.456Z",
+          "finishedAt": "2026-10-19T13:14:03.794Z",
+          "exitCode": 1,
+          "output": "TAP version 13\n# Subtest: keeps a private value out of a poll interval refusal\nnot ok 1 - keeps a private value out of a poll interval refusal\n  ---\n  duration_ms: 1.718542\n  type: 'test'\n  location: '/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/dist-test/test/config.test.js:321:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    \n      {\n        ok: false,\n    +   reason: 'pollInterval must be a whole number of seconds from 300 to 3600, but it is \"private-password\".'\n    -   reason: 'pollInterval must be a whole number of seconds from 300 to 3600, but the supplied value is invalid.'\n      }\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected:\n    ok: false\n    reason: 'pollInterval must be a whole number of seconds from 300 to 3600, but the supplied value is invalid.'\n  actual:\n    ok: false\n    reason: 'pollInterval must be a whole number of seconds from 300 to 3600, but it is \"private-password\".'\n  operator: 'deepStrictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/dist-test/test/config.test.js:330:12)\n    Test.runInAsyncScope (node:async_hooks:226:14)\n    Test.run (node:internal/test_runner/test:1402:25)\n    Test.start (node:internal/test_runner/test:1262:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 137.874833\n",
+          "targetTest": "keeps a private value out of a poll interval refusal",
+          "targetFile": "test/config.test.ts",
+          "expected": "{ ok: false, reason: 'pollInterval must be a whole number of seconds from 300 to 3600, but the supplied value is invalid.' }",
+          "actual": "{ ok: false, reason: 'pollInterval must be a whole number of seconds from 300 to 3600, but it is \"private-password\".' }",
+          "regressionPatch": "diff --git a/test/config.test.ts b/test/config.test.ts\nindex f9b32f8..ea7e2ef 100644\n--- a/test/config.test.ts\n+++ b/test/config.test.ts\n@@ -414,6 +414,20 @@ test('CONF-06 refuses an unrecognised removable sensor without quoting the accou\n   assert.strictEqual(configResult.reason.includes('@'), false);\n });\n \n+test('keeps a private value out of a poll interval refusal', () => {\n+  // arrange\n+  const expectedRefusal: ConfigRefused = {\n+    ok: false,\n+    reason: 'pollInterval must be a whole number of seconds from 300 to 3600, but the supplied value is invalid.',\n+  };\n+\n+  // act\n+  const configResult = validateConfig(accountConfig({ pollInterval: 'private-password' }));\n+\n+  // assert\n+  assert.deepStrictEqual(configResult, expectedRefusal);\n+});\n+\n // The three degradation thresholds live in `src/runtime/monitoringHealth.ts` as constants, and this\n // case is what keeps them there: `REST_FAILURE_THRESHOLD` (two consecutive failed polls),\n // `MISSED_HEARTBEATS_BEFORE_SILENT` (two missed heartbeats) and `HEARTBEAT_INTERVAL_MS` (the 898\n",
+          "semanticAssessment": "The active named test executed against unchanged src/config.ts and failed at its exact deepStrictEqual refusal assertion. The refusal exposed the synthetic private value before platform secret registration; this is the intended privacy failure, not an import, compile, setup, or runner failure.",
+          "productionUnchanged": true,
+          "compileCommand": "npm run build:test",
+          "compileExitCode": 0
+        }
+      ]
+    }
+  ]
+}

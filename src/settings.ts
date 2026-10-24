@@ -1,5 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
-// Modified from the Homebridge plugin template (https://github.com/homebridge/homebridge-plugin-template).
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Defines stable plugin identity and the outbound user agent.
+ *
+ * Modified from the Homebridge plugin template (https://github.com/homebridge/homebridge-plugin-template).
+ */
+
 /**
  * This is the platform name that users register in their Homebridge config.json.
  */

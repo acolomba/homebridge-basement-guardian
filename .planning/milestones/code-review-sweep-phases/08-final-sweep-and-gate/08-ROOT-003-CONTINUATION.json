@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "milestone": "code-review-sweep",
+  "phase": "08-final-sweep-and-gate",
+  "authorization": "Maintainer authorized a separate bounded GSD debug and replan for CR-08-ROOT-003 after the ROOT round-2 no-progress STOP.",
+  "historicalStops": [
+    "08-CORRECTION-ROUNDS.json",
+    "08-STOP-CONTINUATION.json"
+  ],
+  "historicalStopsPreserved": true,
+  "openingIds": [
+    "CR-08-ROOT-003"
+  ],
+  "redEvidence": "08-ROOT-003-RED-EVIDENCE.json",
+  "redCommit": "eff1a58",
+  "greenCommit": "499659b",
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "/root/root003_independent_review",
+      "revision": "499659b4e55238d2e7b5fdd97cd907e9daa7732c",
+      "openingIds": [
+        "CR-08-ROOT-003"
+      ],
+      "fixedIds": [
+        "CR-08-ROOT-003"
+      ],
+      "rejectedIds": [],
+      "newIds": [],
+      "reopenedIds": [],
+      "closingIds": [],
+      "reviewedFiles": [
+        {
+          "path": "src/logging.ts",
+          "blob": "a1bb84c12ab1a89d8fb24c84c654f9ebcd593160",
+          "completeLines": "1-227",
+          "readSpans": ["1-227"],
+          "reviewer": "/root/root003_independent_review",
+          "editedBy": "/root",
+          "reviewScope": "owner"
+        },
+        {
+          "path": "test/logging.test.ts",
+          "blob": "21389fb44da516f8cce83462948d0fe4d58daa19",
+          "completeLines": "1-684",
+          "readSpans": ["1-684"],
+          "reviewer": "/root/root003_independent_review",
+          "editedBy": "/root",
+          "reviewScope": "owner"
+        }
+      ]
+    }
+  ],
+  "forwardOpenIds": [],
+  "state": "completed"
+}

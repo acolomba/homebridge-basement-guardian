@@ -1,0 +1,98 @@
+# Milestones
+
+## code-review-sweep Code Review Sweep (Archived: 2026-10-23)
+
+**Phases completed:** 8 phases, 106 plans
+
+**Scope:** Repository review and bug repair. This archive does not close the real-home or hardware release gates.
+
+**Key accomplishments:**
+- Reviewed all 137 current in-scope source, test, and Cucumber files at their exact revisions.
+- Fixed the five initial spot-check findings and recorded each later finding, repair, and bounded STOP.
+- Added active regression tests for bugs found in cloud, device, runtime, accessory, and root modules.
+- Reconciled every phase verifier and all 17 milestone requirements.
+- Passed the full repository check: 130 offline Cucumber scenarios, 1401 steps, and 43 direct coverage pairs.
+- Confirmed the trust-publication retry in Homebridge 2.4.0 with a synthetic Docker probe.
+
+**Accepted limits:** Three bug histories retain limited pre-fix evidence. The shadow-liveness fix still awaits confirmation with live vendor traffic. Historical STOPs and open Windows remain in the archived records.
+
+Known verification overrides: 1 newly acknowledged, 2 carried forward from a prior close (see STATE.md Deferred Items).
+
+The [milestone audit](milestones/code-review-sweep-MILESTONE-AUDIT.md) gives the evidence and limits.
+
+---
+
+## v1.0 Initial Release (Shipped: 2026-10-13)
+
+**Phases completed:** 7 phases, 73 plans, 177 tasks
+
+Known verification overrides: 2 newly acknowledged, 2 carried forward from a prior close (see STATE.md Deferred Items)
+
+**Key accomplishments:**
+- A repository that builds, lints, dead-code-checks, tests, and packs cleanly, with the Homebridge template scaffold replaced by a platform that only records restored accessories.
+- A configured account authenticates against the vendor Auth0 tenant, discovers devices over REST, and lands one frozen canonical snapshot per device in the store, released cleanly on the Homebridge shutdown event.
+- The write-once snapshot store becomes a merge reducer with a version watermark and a per-device subscription contract, and the remaining eight modules of the source tree land as declaration-only contracts.
+- A six-field strict Homebridge settings form with a plaintext-storage disclosure, a validator that refuses instead of clamping, and a callable-interface log wrapper that scrubs secrets on all seven `Logging` members.
+- An owner-only, atomically written token cache under the Homebridge storage path, keyed by a salted email fingerprint, with each authentication failure routed to the one answer that is safe for it.
+- Four typed vendor operations behind one closed `ROUTES` object, each authorized, deadlined, and narrowed by a hand-written predicate before its answer leaves the client.
+- A pure `node:crypto` SigV4 presigner for `iotdevicegateway`, pinned by an independently computed golden vector, plus a capped, guarded, abortable reconnect policy.
+- A loopback Auth0 tenant, a loopback vendor REST service, an in-process MQTT broker reachable over a WebSocket, and a minimal Homebridge stand-in, all owned by a typed per-scenario world.
+- A narrow client port proven against the real library, one connection serving every device shadow through a four-topic surface, and a reconnect owned by the capped retry policy rather than by the transport.
+- The credential-rotation flake is closed by waiting on the collection each step reads, and the rotation lead and floor are injected options, which cuts the cucumber suite from 40 seconds to 10.
+- The merge reducer now says which source owns telemetry and when an observation actually arrived, so a document that observed nothing cannot make a quiet device read as fresh and a poll cannot revert a value the shadow delivered.
+- Each shadow connection now owns its own state behind an identity guard, is released and reported exactly once when the client stops using it, and can no longer be opened after shutdown; transport operations fail on a ten-second deadline instead of stalling.
+- The malformed-email refusal no longer quotes the account identifier, the settings form and the validator agree on blank values and the required list, and the redacting logger neither raises on an odd object nor grows its secret list with uptime.
+- Typed parse failures on the REST path, a command deadline that starts before the token fetch, one grant per lapse however many callers want it, and a token cache that cannot inherit a wider mode or orphan a bearer token
+- One valid Gemini becomes a registered HomeKit accessory with a truthful, field-validated `AccessoryInformation` service, proven end-to-end by a Cucumber scenario, behind a complete Gemini `DeviceFamily` (strict validation, field-by-field decode, capabilities, commands).
+- Standalone `createReconciliation` state machine tracking two-consecutive-trustworthy-absence removal, plus `DeviceStateStore.remove()` to start a fresh observation epoch after confirmed removal.
+- The family registry's three-way outcome is complete — HALO now resolves to a distinct `unsupported` result instead of falling through to `unknown` — and `platform.ts` dispatches every discovered device through it, so a HALO or unknown-profile device gets its own once-per-run log explanation and never blocks a valid Gemini in the same inventory response.
+- `platform.ts`'s discovery loop now updates an already-cached accessory in place (refreshing `context.device` and pushing the snapshot through `update()`) instead of leaving it untouched, and adopts a vendor rename only while the HomeKit display name still matches the last vendor name the plugin itself stored.
+- `accountRuntime.ts` runs the two-confirmation-plus-final-check removal state machine live against every poll, and `platform.ts` acts on a confirmed removal by unregistering the accessory and clearing its stored state.
+- `basementGuardian.ts`'s `update(snapshot)` re-resolves the family registry and re-validates on every call, computing five untrusted `TrustScope`s and logging once on a plugin-side interpretation failure — and `platform.ts` now reuses one `BasementGuardianAccessory` instance per physical accessory instead of a fresh one per poll, which is what actually lets that state persist.
+- A single hand-built HAP namespace stand-in with constructible `Service` and `Characteristic` bases, the real three-argument `addService`, both real duplicate refusals, and the real format defaults — replacing a two-argument stand-in that would have recorded a display name as a subtype.
+- An explicit six-entry water-level ladder that an illegal code can never reach, and a Gemini adapter that decodes the scopes which validated while omitting only the scope that owns a bad field.
+- `ignoredFaults` as a unique enumerated list, with a D-17 refusal that names the offending entry and enumerates all seven valid ones, plus a seven-key settings-form gate that proves no alert-delay control exists.
+- A vendor `ac_power` now travels family decode, catalogue row, custom and standard HomeKit services, and a published characteristic, with the confirmed-offline adapter proving the accessory's own per-poll state reaches HomeKit too.
+- Eleven more services join the tracer's three: the pit level and its flood adapter, both pumps with their live activity adapters, the battery pair, and four more independent fault adapters, each carrying its exact vendor cause read-only beside its standard value.
+- A lost pump-controller link now stops the plugin vouching for everything downstream of the controller while the link adapter stays truthful, canonical state that changes between polls reaches HomeKit on the store's own notification rather than waiting fifteen minutes, and the immediacy requirement is gated by three runtime layers each shown to catch a defect the other two miss.
+- Every safety transition this phase publishes is now observable end to end against the fake vendor cloud, each scenario proven by patching its defect back into production code, and the accessories tier is proven unable to reach for deferred execution at all by a static gate that is itself proven to discriminate an import from a mention.
+- Two of three dead-code exemptions retired and each removal proven non-vacuous by a planted dead export, plus four README sections telling an administrator what the plugin publishes, what an inactive service means, what removing a sensor costs in their home, and which published numbers are estimates rather than measurements.
+- A HomeKit press of `System Self-Test` now reaches the vendor as one measured `PUT`, the row withholds `On` until the device confirms, and the fake HAP the scenarios run on is held against the real pinned package by a fidelity test that catches every defect planted in it.
+- Every way a control write can end now answers the HAP status that names it and sends nothing it should not, an unconfirmed request returns its Switch to reported state after thirty seconds without retrying, the `Alarm Mute` Switch ships with its whole unverified contract in one `PROVISIONAL_`-named module, and the plugin's first body-carrying request identifies itself by name and says nothing else about the installation.
+- Each pump now carries a persisted observation start, a count of the activations this plugin actually watched, and the time of the last one, on characteristics whose own names say the number is not a device total and on a format wide enough that HAP cannot quietly stop the count advancing.
+- Both Pump services now carry the moment this plugin started watching, how many activations it watched, and when the last one was, driven by one record instance per accessory that reaches disk through a narrow port the composition root is the only supplier of.
+- Every way a control request can end, plus a record that survives a restart, driven through the real plugin against the fake vendor cloud — with the harness's accessory cache modelled, because without it the restart scenario passed while the record never resumed.
+- A README that tells an owner what the activation counts do and do not mean, which published services the Home app draws no tile for, and what the two controls refuse — plus a source-text gate that keeps the single permitted HAP import single, proven by planting a second one and watching it fail.
+- A shadow that stops speaking for two heartbeats now deactivates every safety tile while polling keeps the offline verdict alive, proven end to end against the fake cloud and the fake broker.
+- A restart that never reaches the cloud now shows every cached reading exactly where the last run left it, with every one of them saying plainly that the plugin cannot currently vouch for it.
+- A press is now refused for the reason it was actually refused for, and a HomeKit read cannot reach the network without failing a gate that has been watched to fail against a real violation.
+- A vendor refusal of the account credentials now presents in HomeKit as a failure an owner has to act on, still carrying every reading the plugin last vouched for — and the harness that asserts it was first corrected to model the real HAP rather than its opposite.
+- The degradation thresholds are now pinned as constants by a test that a knob would fail, the README tells an owner what the phase's three new states mean and which one needs them, and the requirements table no longer contradicts its own delivery notes.
+- A credential refusal now halts the runtime whenever it arrives rather than only at launch, and a shutdown tells the accessory tier its command transport is gone.
+- A returning shadow message now restores the monitoring trust at the message itself, guarded to fire once per recovery, proven by a scenario whose device polling is parked at the vendor so no poll tick can satisfy it.
+- A press on a restored control Switch after a failed restart is now refused with `-70412` and the cause "the plugin has no way to reach the vendor right now", instead of flipping the toggle and reporting success, and the three restart-time accessory passes share one guarded walk.
+- A shadow that has missed two heartbeats now stops owning telemetry, so a healthy REST poll reporting a flooded pit reaches `Leak Detected = 1` in HomeKit on the poll that notices the silence — the gate that sat upstream of 05-06's fix and blocked `CR-01`'s outcome for every device whose live path had ever spoken.
+- The end-to-end suite can now describe a two-device account: a named-accessory read, a named-device heartbeat, and a named-device vendor change, with two scenarios proving two pumps publish two accessories that read apart and that a message for one leaves the other where it was.
+- Shadow silence is now a fact about one controller, measured from that controller's own last message and started when discovery admits it, so a poll finds the quiet pump's flood while the pump beside it keeps the readings its own live path delivered.
+- A shadow document reporting only wifi signal and firmware no longer takes the pit reading away from polling, while still counting as the device speaking -- `nextShadowVersion` reads `patch.data`, `carriesObservation` is untouched, and the two harness steps that make the difference visible from a basement.
+- One guard on the single republish callback the control binder holds closes the local refusal, the request expiry and the vendor refusal together, and a refused credential now withdraws every trust scope so the value under the marking is `false` rather than a claim of full trust.
+- A press during shadow silence is still refused, but the reason it gives is now the one that is true, and the value the control tile shows and the value the write path reads come from one rule instead of two that had already drifted apart.
+- A credential-refusal ordering case driven through a real accessory so an inverted push order fails at the unit tier, one `DiscoveryContext` literal behind a shape-marked static gate, and a marking pass named for the trust report it reaches with a line for the refusal that reaches nothing.
+- The README no longer promises an owner that a poll's readings reach HomeKit while the live connection is quiet: it says the live path keeps the readings until it has missed two heartbeats, that the handover is per system while the marking is not, and that a refused credential silences the trust report on every service carrying one rather than every service.
+- A per-connection, per-device shadow subscription wait backed by an aedes `subscribe` listener, plus a single imported accessory-resolution rule in `harness.ts` — the two corrected ledger diagnoses built rather than the ledger text.
+- The account-wide flatten at `monitoringHealth.ts:212` is gone: silence now travels per device from `silentDevices()` to `markMonitoring` through `applyMonitoringHealth(context, account, byDevice)`, and one quiet pump no longer stops its heartbeating neighbour from vouching.
+- The per-device recovery latch and the per-device `Live device reporting` kind that plan 05.1-02 built are now pinned by two-pump cases and three mutations, and a confirmed removal forgets the device's kind through a new silent `FailureLog.forget` rather than announcing a recovery the system never had.
+- Shadow silence is now measured as the larger of a `process.hrtime.bigint()` elapsed time and a wall elapsed time, so a system clock set back an hour cannot shorten a window and hand a dead pump a fresh certificate of health.
+- The wall-clock arrival anchor now survives a restart in a file of its own under the Homebridge storage path, so a bridge restarted after a pump has been quiet for hours no longer hands that pump a fresh certificate of health.
+- The controller-link warning now names the services whose values stopped refreshing, derived from the descriptors the accessory just published, so it cannot drift from the marking pass by construction.
+- The gate is green on both installed runtimes, the one real Gemini behaves as it did — and the persisted arrival anchor was observed surviving a restart byte-identical, which is this phase's central new rule seen on hardware rather than argued.
+- Mixed MIT/Apache license boundary wired end to end (package.json, LICENSE, NOTICE, a static test gate), a three-way Homebridge-version CI matrix dimension, a real packed-tarball trufflehog secret scan as its own workflow, and a workflow_dispatch-only npm publish scaffold.
+- Three mechanical `node:test` gates turn REL-03's dependency-review requirement into re-runnable checks: an exact production-dependency allowlist, a GPL-family license scan of `package-lock.json`, and a telemetry-SDK signature scan of the installed `mqtt` tree.
+- One PLUGIN_USER_AGENT constant, relocated from src/cloud/api.ts into src/settings.ts, now identifies the plugin on all four outbound vendor call sites instead of only the REST command path.
+- README.md now carries all five REL-08 safety/privacy disclosures under a five-case passing test gate, and dev/README.md documents the host multicast prerequisite for HAP pairing.
+- Closed the Cucumber default-profile tag gap, built an observation-only real-pump Cucumber World with no code path to a command write, and shipped discovery/initial-state scenarios that dry-run clean.
+- Completed the REL-09 real-pump suite: a bounded-wait heartbeat/natural-update pair that never requires a status change to pass, a restart scenario proving Auth0 token-cache reuse via a content-hash comparison, and a shutdown scenario proving no unhandled rejection.
+- Four ready-to-run `dev/prep/` checklists for G-001, G-002, G-003/G-004, and the release-readiness gate — written but deliberately unexecuted, every item status: pending.
+- Confirmed `npm run check` passes with all nine prior Phase 6 plans' changes present together, and recorded the phase's shipped user-visible changes in CHANGELOG.md's `[Unreleased]` section without claiming any release gate passed.
+
+---

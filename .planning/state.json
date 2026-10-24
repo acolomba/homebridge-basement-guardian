@@ -1,48 +1,53 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": null,
+  "milestone": "code-review-sweep — Code Review Sweep",
   "phases": [
     {
       "number": "1",
-      "name": "Secure Cloud Foundation",
+      "name": "Known Findings and Loop Proof",
       "status": "complete"
     },
     {
       "number": "2",
-      "name": "Safe Gemini Discovery and Identity",
+      "name": "Cloud Conformance",
       "status": "complete"
     },
     {
       "number": "3",
-      "name": "Safety Monitoring in HomeKit",
+      "name": "Device and Persistence Conformance",
       "status": "complete"
     },
     {
       "number": "4",
-      "name": "Pump Records and Official Controls",
+      "name": "Runtime Conformance",
       "status": "complete"
     },
     {
       "number": "5",
-      "name": "Degraded Operation and Recovery",
-      "status": "pending"
-    },
-    {
-      "number": "5.1",
-      "name": "Per-Pump Trust and Monotonic Silence",
+      "name": "Accessories Conformance",
       "status": "complete"
     },
     {
       "number": "6",
-      "name": "Validated Release Candidate",
+      "name": "Root Module Conformance",
+      "status": "complete"
+    },
+    {
+      "number": "7",
+      "name": "Cucumber Feature Conformance",
+      "status": "complete"
+    },
+    {
+      "number": "8",
+      "name": "Final Sweep and Gate",
       "status": "complete"
     }
   ],
   "next": {
-    "command": "/gsd:progress --next",
-    "label": "Advance to the next step (plan phase 5)",
-    "reason": "Phase 5 of 7 — needs a plan"
+    "command": "/gsd-progress",
+    "label": "Show progress",
+    "reason": "Unsure of state — showing progress"
   },
-  "updated_at": "2026-09-05T14:34:50.802Z"
+  "updated_at": "2026-10-23T15:44:21.357Z"
 }

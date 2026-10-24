@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Validates account settings and resolves platform defaults.
+ */
+
 import { isNotificationServiceKind, NOTIFICATION_SERVICE_KINDS } from './accessories/services.js';
 import { PROTOCOL } from './protocol.js';
 
@@ -8,10 +17,16 @@ import type { PlatformConfig } from 'homebridge';
 /** Name shown in the Homebridge log when the configuration omits one. */
 const DEFAULT_NAME = 'Basement Guardian';
 
-// The practical RFC-5322 shape the settings form already enforces through
-// `format: "email"`. A hand-edited config.json bypasses the form, so the
-// runtime checks the same shape again.
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@][^\s@.]*\.[^\s@]+$/;
+// The settings form uses `format: "email"`. A hand-edited config.json bypasses
+// the form, so the runtime checks dot-atom text and DNS labels with alphanumeric edges.
+const EMAIL_LOCAL_PART_PATTERN = /^[a-z\d!#$%&'*+/?=^_`{|}~-]+(?:\.[a-z\d!#$%&'*+/?=^_`{|}~-]+)*$/i;
+const EMAIL_DOMAIN_PATTERN = /^[a-z\d](?:[a-z\d-]*[a-z\d])?(?:\.[a-z\d](?:[a-z\d-]*[a-z\d])?)+$/i;
+
+function isEmailAddress(email: string): boolean {
+  const at = email.indexOf('@');
+
+  return at > 0 && EMAIL_LOCAL_PART_PATTERN.test(email.slice(0, at)) && EMAIL_DOMAIN_PATTERN.test(email.slice(at + 1));
+}
 
 /** An integer field, its inclusive bounds, and the value an absent field takes. */
 interface IntegerBounds {
@@ -67,24 +82,6 @@ function isUnknownArray(value: unknown): value is readonly unknown[] {
   return Array.isArray(value);
 }
 
-// A refusal quotes the value it rejected, so an object has to be stringified;
-// String({}) reports nothing the administrator can act on. The value arrives
-// from config.json, so it is acyclic.
-//
-// Text is delimited because the two typo classes a slug refusal is least able
-// to help with are exactly the ones bare text hides: a stray leading space
-// renders as a double space nobody sees, and a pasted trailing newline
-// disappears entirely. Every other branch stays as it is: `integerRefusal`
-// shares this helper and JSON.stringify(NaN) answers 'null', which would name a
-// value the administrator never wrote (D-17).
-function describeValue(value: unknown): string {
-  if (typeof value === 'string') {
-    return JSON.stringify(value);
-  }
-
-  return typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value);
-}
-
 // Returns the reason to refuse this field, or undefined when it is acceptable.
 // An absent field is acceptable and takes its documented default later; a
 // supplied value is never clamped and never replaced by that default (D-16).
@@ -96,7 +93,7 @@ function integerRefusal(value: unknown, bounds: IntegerBounds): string | undefin
   if (typeof value !== 'number' || !Number.isInteger(value) || value < bounds.minimum || value > bounds.maximum) {
     const range = `from ${String(bounds.minimum)} to ${String(bounds.maximum)}`;
 
-    return `${bounds.field} must be a whole number of ${bounds.unit} ${range}, but it is ${describeValue(value)}.`;
+    return `${bounds.field} must be a whole number of ${bounds.unit} ${range}, but the supplied value is invalid.`;
   }
 
   return undefined;
@@ -113,26 +110,26 @@ function resolveInteger(value: unknown, bounds: IntegerBounds): number {
 // unrecognised or repeated name refuses the whole configuration rather than
 // being skipped, because a typo means the administrator did not get the
 // adapters they asked for (D-17). The refusal is their only route back, so it
-// names the offending entry and enumerates every name that would have worked.
-// Every quoted value is administrator-authored text, never a credential.
+// enumerates every name that would have worked. Refusals do not quote supplied
+// values because the platform logs them before it can register any secrets.
 function ignoredFaultsRefusal(value: unknown): string | undefined {
   if (value === undefined) {
     return undefined;
   }
 
   if (!isUnknownArray(value)) {
-    return `ignoredFaults must be a list of notification sensor names, but it is ${describeValue(value)}.`;
+    return 'ignoredFaults must be a list of notification sensor names, but the supplied value is invalid.';
   }
 
   const named = new Set<string>();
 
   for (const entry of value) {
     if (!isNotificationServiceKind(entry)) {
-      return `ignoredFaults must name only ${NOTIFICATION_SERVICE_KINDS.join(', ')}, but it names ${describeValue(entry)}.`;
+      return `ignoredFaults must name only ${NOTIFICATION_SERVICE_KINDS.join(', ')}, but it contains an invalid entry.`;
     }
 
     if (named.has(entry)) {
-      return `ignoredFaults must be a unique list, but it names ${describeValue(entry)} more than once.`;
+      return 'ignoredFaults must be a unique list, but it names one sensor more than once.';
     }
 
     named.add(entry);
@@ -164,7 +161,7 @@ function firstRefusal(fields: Record<string, unknown>): string | undefined {
   // Alone among these refusals this one names the field and the rule and
   // quotes nothing: an account email is an account identifier, and the Privacy
   // constraint keeps identifiers out of the log (WR-01, AUTH-02).
-  if (!EMAIL_PATTERN.test(email)) {
+  if (!isEmailAddress(email)) {
     return 'the account email must be an email address.';
   }
 

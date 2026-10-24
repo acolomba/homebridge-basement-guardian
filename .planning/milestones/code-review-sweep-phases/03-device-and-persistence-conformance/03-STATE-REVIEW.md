@@ -1,0 +1,1101 @@
+---
+phase: 03-device-and-persistence-conformance
+reviewed: 2026-10-14T16:48:06Z
+depth: deep
+files_reviewed: 3
+files_reviewed_list:
+  - src/device/state.ts
+  - test/device/state.test.ts
+  - test/device/stateSeeds.ts
+reviewed_revision: ade72e10f4ddd584067b080d1f78323fc93d3762
+reviewed_executable_revision: 90dac3919a7dc190ac29defc93b53d6ccd91379d
+reviewer: /root/phase3_state/state_initial_review
+review_round: 2
+requirement: DEV-01
+initial_review:
+  reviewed: 2026-10-14T15:58:26Z
+  revision: aa826a50a0afeda9a95ab05d38240219bfcb5595
+  files_reviewed: 2
+  critical: 3
+  warning: 7
+  total: 10
+findings:
+  critical: 0
+  warning: 0
+  info: 0
+  total: 0
+open_ids: []
+status: clean
+---
+
+# STATE full-file initial review
+
+This is round 0 triage for plan 03-01, not a correction verdict.
+Both complete files were read at `aa826a50a0afeda9a95ab05d38240219bfcb5595`.
+Source blob: `37bc96dc27786c615ab6ab1e25103c272b048f27`.
+Owner blob: `9ae189718297e65855369d48eb6dee04f465c005`.
+The executable tree and Git index were clean at inspection. Neither scope path
+is Git-ignored; no .codexignore was present.
+
+AGENTS, agent-skills bootstrap, current plan/context/research/patterns/protocol,
+canonical intel decisions, seed findings, Phase 1 state review and its 01-03
+summary were read. All five complete TypeScript rulebooks were applied.
+GSD_RUNTIME=codex configured-skill query returned comments/style/unit-review;
+writer and local-verification were additionally read as the plan requires.
+The installed Fallow skill and live CLI help were read before semantic queries.
+
+## Narrative Findings (AI reviewer)
+
+The following initial-review locations are qualified by
+`aa826a50a0afeda9a95ab05d38240219bfcb5595`. At round 0, all ten findings
+first opened, remained open, and concerned DEV-01. Current independent
+outcomes are recorded in the correction-review section below. No fix,
+evidence or source-change commit has been made by this reviewer.
+
+### BLOCKER findings
+
+#### CR-03-STATE-001: Incomplete public snapshot and canonical-state expectations
+
+**File:** `test/device/state.test.ts:378-400,579-602,725-739,897-915,933-943`.
+**Rule:** Unit writer/reviewer, Assertions: whole public values, independent
+expectations, and public state before interactions; reviewer classification
+BLOCKER for weak or missing assertions.
+**Issue:** The unversioned and first-versioned patch cases compare only water
+level and watermark. The unversioned tracer never reads canonical storage.
+A result containing just those fields, or an implementation returning the
+right result while retaining the previous stored snapshot, passes that case.
+The two-device release case independently proves the first whole snapshot
+but its second assertion also passes when the second device is deleted.
+The unknown-device release case observes only the held watermark, and the
+unknown-device remove case observes only IDs; changes to the held device's
+other facts pass. Listener-failure containment compares only the returned
+water level before interaction observations.
+**Fix:** Independently author complete expected snapshots for these envelope/
+unchanged-store promises and compare both returned snapshots where available
+and `store.snapshot(deviceId)`. Compare the complete second released snapshot.
+Retain scalar assertions when a scalar is the actual promise, such as receipt
+time at 450-462 and the reported running flag at 617-629.
+**Outcome/evidence:** Confirmed by complete source and case reads. This is
+assertion maintenance, not evidence of an existing production defect. The
+tracer is `applies an unversioned patch and leaves the applied version where
+the last versioned patch set it`; any negative control must remain separate
+from production RED and restore exact source bytes.
+
+#### CR-03-STATE-002: Listener recorder discards most of the promised envelopes
+
+**File:** `test/device/state.test.ts:35-41,88-91,758-784,827-837,854-879,897-914`.
+**Rule:** Unit writer/reviewer, Assertions: compare whole values and every
+promised result; Test doubles: assert notification arguments when notifying
+is the public behavior. BLOCKER for weak assertions.
+**Issue:** `recordInto` turns each callback into changed keys and two water-level
+scalars. The case titled `reports the merged snapshot, the snapshot it replaced,
+and the one key that changed` never checks either whole callback snapshot.
+A listener receiving a fabricated next/previous object with only
+`data.water_level` passes; the structured-change cases do not observe the
+changed structured value at all. The first-discovery case only proves that
+the prior water level is undefined, not that the prior snapshot is undefined.
+These callback payloads drive the actual platform live update at
+`src/platform.ts:173-176`.
+**Fix:** Record `next`, `previous`, and `changedKeys` without projecting their
+content. Independently compare complete notification records and public
+stored/returned state before the interaction checks. Preserve empty-list
+assertions for actual no-notification promises.
+**Outcome/evidence:** Confirmed through the complete owner and the platform
+callback body. No current wrong callback payload was observed; this is
+assertion maintenance, with no genuine RED claim.
+
+#### CR-03-STATE-003: Repeated release cannot detect receipt-time restamping
+
+**File:** `test/device/state.test.ts:644-671`.
+**Rule:** Unit writer/reviewer, opening discrimination requirement and
+Assertions; Patterns/Time: use an injected clock. BLOCKER for a case a plausible
+wrong implementation would pass.
+**Issue:** The case claims a later release moves no value, specifically receipt
+time. It builds `fixedStoreOptions()`, whose clock always returns FIRST_RECEIPT.
+The existing whole snapshot expectation therefore also passes if
+`releaseShadowSource` incorrectly sets receivedAt to clock.now() on every
+call. Two calls never simulate the later local time the title and rationale
+describe.
+**Fix:** Inject a mutable clock, discover/patch at FIRST_RECEIPT, advance it
+before release and again before the repeated release, and keep the complete
+independent canonical snapshot and empty notification expectations.
+**Outcome/evidence:** Confirmed by the fixed clock definition at 84-85 and the
+complete case. Source 385-390 currently preserves receipt time. This is a
+test-fixture discrimination defect, not a production bug or SC-03 reopening.
+
+### WARNING findings
+
+#### CR-03-STATE-004: State source omits the approved header sections
+
+**File:** `src/device/state.ts:1-6`.
+**Rule:** D-01 and Google style, Files and modules: separate copyright,
+fileoverview, imports and implementation sections.
+**Issue:** The SPDX line is followed immediately by imports; copyright and
+fileoverview JSDoc are absent. The already reviewed owner header at 1-9 is
+correct.
+**Fix:** Keep SPDX first; add separate Copyright (c) 2026 Alessandro Colomba
+and concise @fileoverview blocks with one blank line between sections.
+**Outcome/evidence:** Confirmed by independently inspecting both full headers.
+Header-only work stays separate from functional causes.
+
+#### CR-03-STATE-005: Public documentation omits contracts and embeds internals
+
+**File:** `src/device/state.ts:8,83-85,93-100,109-143`.
+**Rule:** Google style, Comments and documentation: document non-obvious public
+members; JSDoc for users and // for implementation notes. Canonical decisions
+C-002 and D-030 qualify identity mutability.
+**Issue:** applyDiscovery has a substantial ownership/time/merge contract but
+no JSDoc; snapshot and deviceIds omit their absence/list contracts. remove
+JSDoc explains the private toSnapshot branch. releaseShadowSource JSDoc
+describes nextShadowVersion internals and extensive socket/replay reasoning.
+DeviceIdentity's overview says all enclosed facts never change, although the
+name changes in owner 125-147 and C-002 permits deviceTypeId changes for the
+same deviceId. These descriptions confuse physical identity with profile
+selection and mutable vendor display facts.
+**Fix:** Document observable method behavior concisely. Move implementation
+rationale beside its implementation, retaining sourced safety/clock/watermark
+reasons and durable IDs. Describe DeviceIdentity as identifying/display facts
+for one physical system and reserve immutability for deviceId.
+**Outcome/evidence:** Confirmed from source, canonical decisions, actual
+constructors, platform consumers and rename case. No declaration or runtime
+behavior change is required.
+
+#### CR-03-STATE-006: Local telemetry input uses the forbidden generic name
+
+**File:** `test/device/state.test.ts:222-228`.
+**Rule:** Unit writer/reviewer, Naming values: use production roles and do not
+name a local value data.
+**Issue:** The writable fixture local is named data instead of identifying its
+role as supplied vendor telemetry.
+**Fix:** Rename only the local to vendorTelemetry (including shorthand mapping
+`data: vendorTelemetry` and its mutation). Preserve canonical/vendor field
+names named data.
+**Outcome/evidence:** Confirmed; bounded test readability cause.
+
+#### CR-03-STATE-007: Test rationale narrates an obsolete guard
+
+**File:** `test/device/state.test.ts:465-469`.
+**Rule:** TypeScript comments, Forbidden: narration of code that no longer
+exists; comments describe current behavior and its reason.
+**Issue:** `because conflating them is what the wider guard did` records an
+earlier implementation instead of the current metadata/telemetry distinction.
+**Fix:** Keep the present-tense safety rationale about receipt time and
+telemetry ownership; remove the obsolete-guard narration. Preserve CR-03,
+SYNC-02 and D-014 where they identify durable requirements.
+**Outcome/evidence:** This is the accepted portion of the rationale seed.
+The other rationale blocks at 493-496,644-647,694-697,722-724 describe
+non-obvious setup/ownership scenarios above their cases and are retained:
+the rule permits explanatory setup comments. There is no finding merely
+because such comments are longer than AAA markers.
+
+#### CR-03-STATE-008: Reused data seeds remain inside the owner
+
+**File:** `test/device/state.test.ts:43-58`.
+**Rule:** Unit writer/reviewer, Test data and Test support organization:
+cross-case fresh seeds live in their concern seed module.
+**Issue:** geminiDevice and geminiIdentity are reused data constructors in the
+owner instead of a concern seed module. They already return fresh literals,
+so this is organization rather than shared-state contamination.
+**Fix:** Move these fresh seed functions to conditional
+`test/device/stateSeeds.ts`, with the approved header and role-specific typed
+exports. Retain independently written expected values; do not derive expected
+snapshots from production output. Do not move behavioral store/log/notification
+helpers speculatively. The actual helper must receive independent full review
+and broad staged verification.
+**Outcome/evidence:** Confirmed from definitions and uses across the complete
+owner. No existing stateSeeds file was in the baseline inventory.
+
+#### CR-03-STATE-009: Non-throwing cases collapse act and assert
+
+**File:** `test/device/state.test.ts:981-998`.
+**Rule:** Unit writer, Case structure: act & assert only for one assert.throws
+or assert.rejects expression; separate arrange/act/assert otherwise.
+**Issue:** The unknown snapshot and empty deviceIds cases put non-throwing
+reads inside assertions under act & assert.
+**Fix:** Obtain the snapshot/identifiers in an act section and assert the
+literal promised values in a separate assert section.
+**Outcome/evidence:** Confirmed; no behavior change and no need to repeat
+toolchain-owned style checks.
+
+#### CR-03-STATE-010: Compile contracts are wrapped as runtime cases
+
+**File:** `test/device/state.test.ts:320-339`.
+**Rule:** Unit writer, Patterns/Type-only modules and Do not test what a gate
+already enforces; unit reviewer, Case structure and meaningful public behavior.
+**Issue:** These two test callbacks contain only satisfies/@ts-expect-error
+compile checks. At runtime they merely evaluate and discard literals. The
+meaningful contract is compiler rejection of desired fields, not a runtime
+behavior observed by these cases; their act & assert markers perform neither
+a throwing nor rejection expression.
+**Fix:** Preserve both meaningful desired/acknowledgement negative compile
+contracts as top-level satisfies/@ts-expect-error checks in the owner.
+Remove only their synthetic runtime wrappers and misleading AAA markers.
+**Outcome/evidence:** Confirmed structure issue, classified WARNING rather
+than claiming an uncovered runtime production defect. Strict compilation
+continues to enforce the actual contract.
+
+## Six seed dispositions
+
+| Seed | Current outcome | Source/rule evidence |
+| --- | --- | --- |
+| Required undefined versus optional members | Rejected as a finding; preserve required keys | state 38-62,223-231,280-288; cloud/shadow 197-205 constructs every patch key; exactOptionalPropertyTypes distinguishes omission from explicit undefined. D-05/D-06 outweigh cosmetic optionalization; Google style Types does not erase the complete public shape. |
+| Snapshot readonly members | Rejected as a mandatory interface violation | Google style Classes readonly requirement applies to class properties; state 24-43 is an interface. Fresh exact semantic traces and actual constructors/readers found no required snapshot writes. Runtime freeze at 181-187 implements immutability. No readonly edit, arbitrary deep mapped type, or new mutability contract is justified by that class-only seed. |
+| Public JSDoc versus implementation notes | Accepted, CR-03-STATE-005; source header separately CR-03-STATE-004 | Missing public member contract and private implementation narration cited above; identity overview qualified by C-002/D-030. |
+| Local data naming versus canonical field | Accepted, CR-03-STATE-006 | Only the fixture local at 222 is generic. Public data members are protocol/canonical vocabulary and remain unchanged. |
+| In-case rationale | Partly accepted, CR-03-STATE-007; blanket deletion rejected | Current seed blocks are above cases. Preserve non-obvious setup rationale under the exception; remove only past implementation narration at 466. |
+| Incomplete whole promises | Accepted, CR-03-STATE-001/002; additional clock weakness CR-03-STATE-003 | Selected envelope/canonical/notification promises remain incomplete. Genuine scalar promises, whole opaque data assertions, and empty notification lists remain legitimate. |
+
+## SC-03 preservation and production-candidate assessment
+
+SC-03 remains fixed at this revision: complete discovery envelope 242-255;
+complete nested telemetry plus presence before frozen check 266-276; complete
+version row returns and canonical readbacks 355-374; metadata watermark
+return and canonical refusal 501-517; complete nested metadata and presence
+541-551; merged frozen snapshot presence 563-574; released stored snapshot
+presence 682-691. No fixed SC-03 finding reopens. No global D-03 stop is
+triggered by round 0. New independent assertion causes above do not reset the
+future STATE correction-round counter.
+
+The shallow-copy/deep-freeze ownership candidate was traced, not accepted as a
+production bug. state 153-187,206-207 shares nested JSON objects with incoming
+readonly records and freezes those aliases; the top-level vendor mutation
+case 220-231 remains valid. cloud/types ApiDevice.data is readonly and the
+actual JSON-normalization/ingress paths do not subsequently mutate nested
+input: cloud/types toApiDevice, shadow 197-205/264-284, runtime 393-425/825-866.
+No separately documented writable nested-alias preservation promise or
+consumer relying on it was found. Arbitrary Maps, cycles, accessors and
+non-JSON class instances do not establish a defect against these actual
+JSON-ingress contracts. This assessment preserves the existing top-level
+writable fixture and runtime-deep-frozen snapshots; it does not authorize
+new input ownership behavior. No genuine production defect, security
+vulnerability, or production RED evidence was established.
+
+Monotonic refusals, telemetry-only watermark acquisition, metadata receipt
+observations, local/device clock separation, named-device release and the
+fixed private-error-safe log message were traced through their public paths.
+The fixed listener log at state 315-330 and owner 897-915 is a documented
+privacy promise, so its exact safe message assertion is legitimate.
+No logger-call style defect is opened for it.
+
+## Exact semantic consumer evidence
+
+Fresh queries ran at the reviewed revision. CLI help validated flags; the
+installed configuration contains no remote extends. Each command used
+`./node_modules/.bin/fallow dead-code --type-aware --type-aware-project
+<project> --symbol-impact src/device/state.ts:<symbol> --format json --quiet
+--no-cache`. stdout was valid kind=impact JSON, stderr was empty, raw process
+exit was 0, status and identity.completeness were complete, and confidence
+was high for all six. These are exact symbol-consumer queries, not tsc or
+coverage evidence.
+
+| Symbol | Project | Direct consumers | Targeted owner count |
+| --- | --- | --- | --- |
+| DeviceSnapshot | tsconfig.json | src/accessories/basementGuardian.ts; src/device/family.ts; src/device/gemini.ts; src/platform.ts | 0 |
+| DeviceSnapshot | tsconfig.test.json | preceding four; features/real-pump/support/realWorld.ts; features/support/steps/shadow.ts; features/support/world.ts; test/accessories/basementGuardian.test.ts; test/device/gemini.test.ts; test/device/state.test.ts; test/runtime/accountRuntime.test.ts | 4 |
+| DeviceIdentity | tsconfig.json | none outside its declaring module | 0 |
+| DeviceIdentity | tsconfig.test.json | test/device/state.test.ts | 1 |
+| ReportedPatch | tsconfig.json | src/cloud/shadow.ts; src/runtime/accountRuntime.ts | 0 |
+| ReportedPatch | tsconfig.test.json | preceding two; test/cloud/shadow.test.ts; test/device/state.test.ts; test/platform.test.ts; test/runtime/accountRuntime.test.ts | 4 |
+
+Production project config hash:
+`sha256:21136545e03add83002d24624dc948bec8da00383132c13a0882182a003d9a26`.
+Test project config hash:
+`sha256:d84fa7d40c0319006004dc8560f0e84f3dee27cc3a3f1353bcb201f05c00e3b8`.
+Semantic schema version 3, backend typescript-go. All six queries returned
+empty affected_files; absence of those entries is not absence of direct
+consumers or unknown externally published API use.
+
+Actual bodies/constructors were read, including family 180-194, Gemini
+219-222/360-374, basementGuardian 449-460/988-1063, platform 173-176/282-334,
+cloud shadow 197-205/264-284, runtime 393-425/825-866; test snapshot/patch
+constructors in Gemini 114-125, basementGuardian 453-466, runtime 602-604,
+platform 609-611, shadow 192-194; feature World snapshot 439-448, shadow
+steps 325-338, real World 152-154. Text search found no assignment to public
+snapshot envelope members. This is bounded compatibility reading, not a
+full review of these outside files.
+
+## Verification and counters
+
+The coordinator supplied a fresh same-session
+`npm run build:test && node --test --test-reporter=tap
+dist-test/test/device/state.test.js` run: exit 0, 54 tests, 54 pass,
+0 fail/skip/cancel, on unchanged baseline
+`aa826a50a0afeda9a95ab05d38240219bfcb5595`. Node v26.11.1 was independently
+observed. The reviewer ran no build, owner test, coverage, static gate,
+mutation control, audit/commit hook, install, live profile or Git mutation.
+
+Fresh static and direct-pair evidence is pending with the coordinator.
+Prior Phase 1 metrics are preservation context, not new unchanged-input
+same-session verification. No scheduled/missing-yet gate is misreported as
+a source defect. A full combined gate remains required for the wave and phase.
+
+| Review | Opening | Fixed | Rejected accepted IDs | New | Reopened | Closing |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Initial round 0 | 10 | 0 | 0 | 0 | 0 | 10 |
+
+There are three BLOCKER assertion-maintenance causes and seven WARNING
+conformance causes. Rejected seed candidates do not enter the accepted-ID
+counter. No source/test/helper was modified; only this assigned report was
+written. No cause is fixed or committed yet. DEV-01 remains pending.
+
+## Native Fallow output retained
+
+The following stdout is retained without rewriting its JSON content. Every
+query has raw exitCode 0 and empty stderr. The per-query project and symbol
+are part of the exact command template above.
+
+### tsconfig.json: DeviceSnapshot
+
+exitCode: 0; stderr: empty.
+
+```json
+{"kind":"impact","target":{"path":"src/device/state.ts","namespace":"type","declaration_kind":"export","exported_name":"DeviceSnapshot","local_name":"DeviceSnapshot","line":24,"col":17},"identity":{"mode":"type-aware","semantic_schema_version":3,"capabilities":["symbol-impact"],"project_config_hash":"sha256:21136545e03add83002d24624dc948bec8da00383132c13a0882182a003d9a26","backend_family":"typescript-go","completeness":"complete"},"selected_project":"tsconfig.json","assertion":"consumers-found","status":"complete","direct_consumers":[{"path":"src/accessories/basementGuardian.ts","relation":"direct-type-consumer","distance":1},{"path":"src/device/family.ts","relation":"direct-type-consumer","distance":1},{"path":"src/device/gemini.ts","relation":"direct-type-consumer","distance":1},{"path":"src/platform.ts","relation":"direct-type-consumer","distance":1}],"total_direct_consumer_count":4,"affected_files":[],"total_affected_file_count":0,"targeted_tests":[],"total_targeted_test_count":0,"confidence":"high"}
+```
+
+### tsconfig.json: DeviceIdentity
+
+exitCode: 0; stderr: empty.
+
+```json
+{"kind":"impact","target":{"path":"src/device/state.ts","namespace":"type","declaration_kind":"export","exported_name":"DeviceIdentity","local_name":"DeviceIdentity","line":9,"col":17},"identity":{"mode":"type-aware","semantic_schema_version":3,"capabilities":["symbol-impact"],"project_config_hash":"sha256:21136545e03add83002d24624dc948bec8da00383132c13a0882182a003d9a26","backend_family":"typescript-go","completeness":"complete"},"selected_project":"tsconfig.json","assertion":"no-consumers-found","status":"complete","direct_consumers":[],"total_direct_consumer_count":0,"affected_files":[],"total_affected_file_count":0,"targeted_tests":[],"total_targeted_test_count":0,"confidence":"high"}
+```
+
+### tsconfig.json: ReportedPatch
+
+exitCode: 0; stderr: empty.
+
+```json
+{"kind":"impact","target":{"path":"src/device/state.ts","namespace":"type","declaration_kind":"export","exported_name":"ReportedPatch","local_name":"ReportedPatch","line":53,"col":17},"identity":{"mode":"type-aware","semantic_schema_version":3,"capabilities":["symbol-impact"],"project_config_hash":"sha256:21136545e03add83002d24624dc948bec8da00383132c13a0882182a003d9a26","backend_family":"typescript-go","completeness":"complete"},"selected_project":"tsconfig.json","assertion":"consumers-found","status":"complete","direct_consumers":[{"path":"src/cloud/shadow.ts","relation":"direct-type-consumer","distance":1},{"path":"src/runtime/accountRuntime.ts","relation":"direct-type-consumer","distance":1}],"total_direct_consumer_count":2,"affected_files":[],"total_affected_file_count":0,"targeted_tests":[],"total_targeted_test_count":0,"confidence":"high"}
+```
+
+### tsconfig.test.json: DeviceSnapshot
+
+exitCode: 0; stderr: empty.
+
+```json
+{"kind":"impact","target":{"path":"src/device/state.ts","namespace":"type","declaration_kind":"export","exported_name":"DeviceSnapshot","local_name":"DeviceSnapshot","line":24,"col":17},"identity":{"mode":"type-aware","semantic_schema_version":3,"capabilities":["symbol-impact"],"project_config_hash":"sha256:d84fa7d40c0319006004dc8560f0e84f3dee27cc3a3f1353bcb201f05c00e3b8","backend_family":"typescript-go","completeness":"complete"},"selected_project":"tsconfig.test.json","assertion":"consumers-found","status":"complete","direct_consumers":[{"path":"features/real-pump/support/realWorld.ts","relation":"direct-type-consumer","distance":1},{"path":"features/support/steps/shadow.ts","relation":"direct-type-consumer","distance":1},{"path":"features/support/world.ts","relation":"direct-type-consumer","distance":1},{"path":"src/accessories/basementGuardian.ts","relation":"direct-type-consumer","distance":1},{"path":"src/device/family.ts","relation":"direct-type-consumer","distance":1},{"path":"src/device/gemini.ts","relation":"direct-type-consumer","distance":1},{"path":"src/platform.ts","relation":"direct-type-consumer","distance":1},{"path":"test/accessories/basementGuardian.test.ts","relation":"direct-type-consumer","distance":1},{"path":"test/device/gemini.test.ts","relation":"direct-type-consumer","distance":1},{"path":"test/device/state.test.ts","relation":"direct-type-consumer","distance":1},{"path":"test/runtime/accountRuntime.test.ts","relation":"direct-type-consumer","distance":1}],"total_direct_consumer_count":11,"affected_files":[],"total_affected_file_count":0,"targeted_tests":[{"path":"test/accessories/basementGuardian.test.ts","relation":"targeted-test","distance":1,"via":["test/accessories/basementGuardian.test.ts"]},{"path":"test/device/gemini.test.ts","relation":"targeted-test","distance":1,"via":["test/device/gemini.test.ts"]},{"path":"test/device/state.test.ts","relation":"targeted-test","distance":1,"via":["test/device/state.test.ts"]},{"path":"test/runtime/accountRuntime.test.ts","relation":"targeted-test","distance":1,"via":["test/runtime/accountRuntime.test.ts"]}],"total_targeted_test_count":4,"confidence":"high"}
+```
+
+### tsconfig.test.json: DeviceIdentity
+
+exitCode: 0; stderr: empty.
+
+```json
+{"kind":"impact","target":{"path":"src/device/state.ts","namespace":"type","declaration_kind":"export","exported_name":"DeviceIdentity","local_name":"DeviceIdentity","line":9,"col":17},"identity":{"mode":"type-aware","semantic_schema_version":3,"capabilities":["symbol-impact"],"project_config_hash":"sha256:d84fa7d40c0319006004dc8560f0e84f3dee27cc3a3f1353bcb201f05c00e3b8","backend_family":"typescript-go","completeness":"complete"},"selected_project":"tsconfig.test.json","assertion":"consumers-found","status":"complete","direct_consumers":[{"path":"test/device/state.test.ts","relation":"direct-type-consumer","distance":1}],"total_direct_consumer_count":1,"affected_files":[],"total_affected_file_count":0,"targeted_tests":[{"path":"test/device/state.test.ts","relation":"targeted-test","distance":1,"via":["test/device/state.test.ts"]}],"total_targeted_test_count":1,"confidence":"high"}
+```
+
+### tsconfig.test.json: ReportedPatch
+
+exitCode: 0; stderr: empty.
+
+```json
+{"kind":"impact","target":{"path":"src/device/state.ts","namespace":"type","declaration_kind":"export","exported_name":"ReportedPatch","local_name":"ReportedPatch","line":53,"col":17},"identity":{"mode":"type-aware","semantic_schema_version":3,"capabilities":["symbol-impact"],"project_config_hash":"sha256:d84fa7d40c0319006004dc8560f0e84f3dee27cc3a3f1353bcb201f05c00e3b8","backend_family":"typescript-go","completeness":"complete"},"selected_project":"tsconfig.test.json","assertion":"consumers-found","status":"complete","direct_consumers":[{"path":"src/cloud/shadow.ts","relation":"direct-type-consumer","distance":1},{"path":"src/runtime/accountRuntime.ts","relation":"direct-type-consumer","distance":1},{"path":"test/cloud/shadow.test.ts","relation":"direct-type-consumer","distance":1},{"path":"test/device/state.test.ts","relation":"direct-type-consumer","distance":1},{"path":"test/platform.test.ts","relation":"direct-type-consumer","distance":1},{"path":"test/runtime/accountRuntime.test.ts","relation":"direct-type-consumer","distance":1}],"total_direct_consumer_count":6,"affected_files":[],"total_affected_file_count":0,"targeted_tests":[{"path":"test/cloud/shadow.test.ts","relation":"targeted-test","distance":1,"via":["test/cloud/shadow.test.ts"]},{"path":"test/device/state.test.ts","relation":"targeted-test","distance":1,"via":["test/device/state.test.ts"]},{"path":"test/platform.test.ts","relation":"targeted-test","distance":1,"via":["test/platform.test.ts"]},{"path":"test/runtime/accountRuntime.test.ts","relation":"targeted-test","distance":1,"via":["test/runtime/accountRuntime.test.ts"]}],"total_targeted_test_count":4,"confidence":"high"}
+```
+
+## Header and unversioned tracer repair
+
+Fixer: `/root/phase3_state/state_tracer_fix`, role `gsd-code-fixer`.
+Scope is only 03-01-01. This records initial repairs, not a correction round.
+Initial review history and its ten accepted IDs remain above unchanged.
+
+The persisted `.gsd/dispatch-isolation-sentinel.json` was read directly:
+isolation `none`, phase `03`, plan `03-01`, written_at `1791993068541`.
+All verification ran in the existing `features/code-review-sweep` checkout,
+not a new isolated worktree. The pre-plan ledger
+`gsd-plan-head-before-03-01` in the resolved Git directory was persisted as
+`aa826a50a0afeda9a95ab05d38240219bfcb5595` before the first commit.
+No isolation query, branch switch, install or live integration was performed.
+
+CR-03-STATE-004 has its minimum header repair in
+`5808523c26899d15f8f0a4b0be7b147de6863d86`:
+`style(state): add canonical source file header`.
+The actual sole committed path is `src/device/state.ts`, with nine added
+lines and no deletions. SPDX remains first, with separate copyright and
+overview JSDoc blocks and exactly one blank line between sections/imports.
+No source declaration or runtime behavior changed. The complete owner
+header remains correct and unchanged. Independent correction review is pending.
+
+CR-03-STATE-001 is partially repaired: its unversioned water-level-3 tracer
+replaces two selected-property checks with one independent whole
+`DeviceSnapshot` expectation, used for both the returned value and public
+`store.snapshot(DEVICE_ID)` readback. It preserves version 5, connectivity,
+identity, all omitted telemetry, empty metadata, device time
+`1700000000000` and separate local receipt time `1700000777000`.
+Expected values are authored literals, not derived from the returned snapshot.
+Other CR-03-STATE-001 sites remain pending. CR-03-STATE-002/003/005 through
+010 remain pending. No new seed helper or production-bug RED record was needed.
+All original SC-03 whole/frozen-presence/canonical-refusal assertions remain
+unchanged. No reopening or D-03 stop was found.
+
+### Native tracer and control evidence
+
+Every experiment used `npm run build:test`, followed by
+`node --test --test-reporter=tap dist-test/test/device/state.test.js`.
+Node was `v26.11.1`; reviewed source revision was
+`5808523c26899d15f8f0a4b0be7b147de6863d86` with only the tracer test diff.
+Initial tracer build/owner both exited 0, with 54/54 tests passing and no
+failed, skipped or cancelled tests. These are assertion controls against
+implemented behavior, not unchanged-production bug RED.
+
+Both mutations applied only when `patch.version === undefined` and
+`patch.data?.water_level === 3`, leaving every SC-03 case untouched.
+
+| Control | UTC owner start | Native build / owner exits | Intended failure | Restored build / owner exits |
+| --- | --- | --- | --- | --- |
+| Correct returned snapshot, previous canonical snapshot retained | 2026-10-14T16:05:58.533692Z | 0 / 1 | Tracer canonical expectation: actual water level 1 versus expected 3; ERR_ASSERTION | 0 / 0; 54/54 |
+| Correct canonical snapshot, returned connectivity.connected false | 2026-10-14T16:06:25.052472Z | 0 / 1 | Tracer returned expectation: actual connected false versus expected true; ERR_ASSERTION | 0 / 0; 54/54 |
+
+The named target was `applies an unversioned patch and leaves the applied
+version where the last versioned patch set it`. Each mutated run executed
+all 54 tests: 53 passed, only the intended target failed, zero skipped or
+cancelled. The canonical failure was the second whole assertion at compiled
+owner line 318; the envelope failure was the first at line 317. Both earlier
+selected-property assertions would miss these controls.
+
+Canonical control replaced the store write with:
+
+```typescript
+snapshots.set(deviceId, patch.version === undefined && patch.data?.water_level === 3 ? previous : snapshot);
+```
+
+Envelope control replaced the patch return with:
+
+```typescript
+return patch.version === undefined && patch.data?.water_level === 3 ? freeze({ ...snapshot, connectivity: { ...snapshot.connectivity, connected: false } }) : snapshot;
+```
+
+After each control, `cmp src/device/state.ts /tmp/state-tracer-original.ts`
+exited 0 and `git diff -- src/device/state.ts` was empty against the header
+commit. Restored source SHA-256 is
+`070c580951f786152b5105da9d6776e742345e1740aec5c5751c1d2d0bda06bd`.
+Mutated source SHA-256 values were respectively
+`15f6b1f0708ed5da92c9e127bc4995f7013ec657a3202076818be75ac84a56ac`
+and `ce742dd8d572137a37decf9758fdc270925768e3ed949890a39681bad73ef0ee`.
+The unchanged tracer-owner SHA-256 throughout was
+`ef19760354a7624725d167d8b9f9dc2a2aa656f79f3c3027808981ec4458865d`.
+The source diff against the batch baseline contains only the approved header.
+
+Full unmodified stdout/stderr, exact command arrays, start/end timestamps,
+raw exits, Node version, revision, complete source/owner patches and SHA-256
+values are retained under `/tmp/state-tracer-evidence/` in
+`canonical-control-build.json`, `canonical-control-owner.json`,
+`canonical-restored-build.json`, `canonical-restored-owner.json`,
+`envelope-control-build.json`, `envelope-control-owner.json`,
+`envelope-restored-build.json` and `envelope-restored-owner.json`.
+Exact restored source bytes remain `/tmp/state-tracer-original.ts`.
+
+`npm run test:coverage:direct -- src/device/state.ts test/device/state.test.ts`
+started at 2026-10-14T16:06:58.795134Z and exited 0 at
+16:07:02.042026Z. This selector builds freshly and runs only the state pair.
+A native module-only LCOV run on the same compiled inputs exited 0 and
+recorded lines 231/231, functions 23/23 and branches 61/61: all 100%.
+Its exact command and raw exit are in `tracer-native-counts.json`, complete
+TAP in `/tmp/state-tracer-native-coverage.tap` and the single LCOV record in
+`/tmp/state-tracer-native.lcov`. This is focused evidence; the coordinator
+owns the full combined `npm run check` gate.
+
+### Guard, audit and commit evidence
+
+Installed Fallow 3.27.0 skill and live root/guard/audit help were read.
+Guard ran before either code change with raw exit 0; both paths have no
+configured boundary zones or policy packs. This reports absent policies,
+not a measurement of configured architecture compliance.
+Before the header commit, `./node_modules/.bin/fallow audit --base
+aa826a50a0afeda9a95ab05d38240219bfcb5595 --format json --quiet`
+exited 0, verdict `pass`, base_ref exactly the batch baseline, head_sha
+`aa826a5`, zero introduced findings. Its actual header pre-step
+`SKIP=npm-check pre-commit run --files src/device/state.ts` exited 0.
+Ordinary foreground `git commit` exited 0 with all applicable normal hooks
+enabled, including `npm run check:commit`; no failed commit occurred.
+
+Before the tracer commit, the sandboxed exact-base audit exited 2 because
+Fallow could not create its temporary baseline worktree. That attempt was
+UNAVAILABLE, not clean; `tracer-audit.json` preserves it. A justified elevated
+retry exited 0, verdict `pass`, base_ref exactly the batch baseline, head_sha
+`5808523`, zero introduced findings. Its complete stdout and stderr are retained
+in `tracer-audit-escalated.json`; stderr warns about two cached TypeScript
+package entry points outside the temporary project root. `tracer-guard.json`
+retains the guard result. The temporary Fallow baseline is tool-owned analysis,
+not executor isolation or a new feature branch.
+The tracer owns exactly `test/device/state.test.ts` and this report.
+Its exact pre-step is `SKIP=npm-check pre-commit run --files
+test/device/state.test.ts
+.planning/phases/03-device-and-persistence-conformance/03-STATE-REVIEW.md`.
+The first pre-step exited 1 only because end-of-file-fixer removed an extra
+trailing blank line from the report; it changed no TypeScript bytes. After
+restaging, the repeated pre-step exited 0 at 2026-10-14T16:09:40.185851Z.
+Native outputs are `tracer-pre-step.json` and `tracer-pre-step-repeat.json`.
+This evidence addition is restaged and rechecked before the commit.
+Actual normal-hook result, commit hash/path inspection and rebuilt tracer
+feedback are supplied to the coordinator after the foreground commit.
+No correction round or accepted-ID closure is claimed by this repair record.
+
+## Cause repair pass: task 03-01-02
+
+Fixer: `/root/phase3_state/state_expansion_fix`, role gsd-code-fixer.
+Starting revision: `ca8b3ddf2fc9a79f2e6c1afa853e67d1f70db306`.
+Repaired code revision: `b05e58f75b82510537552109a80601ccf02b7b0c`.
+All checks ran in the existing feature checkout, under the persisted
+`isolation: none` dispatch. No worktree, branch, shared ledger or summary
+was changed. The actual branch remained `features/code-review-sweep`.
+
+This pass applies the remaining accepted causes. It is not an independent
+correction review. The initial round remains round 0 with ten accepted IDs.
+No correction count is reset, and no independent closure is claimed.
+The complete source/owner and new seed require the next full review.
+No genuine production bug or SC-03 reopening was identified; no production
+RED JSON was created.
+
+### Applied causes and actual commits
+
+Each row has requirement DEV-01 and retains its initial rule, severity and
+revision-qualified finding above. The status is applied, awaiting independent
+review. All actual code commits exited 0 with enabled normal hooks.
+
+| ID suffix | Applied repair | Full commit | Actual committed paths |
+| --- | --- | --- | --- |
+| 001 | Complete first-versioned returned/stored snapshots, second released device, held state after unknown release/remove, and listener-failure returned/stored state; retains the prior unversioned tracer | `169e4ed4a116d7b3986ba4cc6d0cb97debc72202` | `test/device/state.test.ts` |
+| 002 | Records complete next/previous snapshots and changedKeys; independently compares all six notified envelopes after returned/stored state | `3e4ba69c38f7a883390494f147a7e8a71f377da6` | `test/device/state.test.ts` |
+| 003 | Advances the injected clock before each release; keeps the whole independent unchanged snapshot and empty notifications | `f78999a1f58c9f0e8557ff04be5a5caee050ea35` | `test/device/state.test.ts` |
+| 005 | Clarifies identity and public snapshot/list/discovery/removal/release contracts; relocates safety rationale beside implementation | `72417aba9e365f4736e2a54b8a9c26656ef45ec0` | `src/device/state.ts` |
+| 006 | Renames only the writable telemetry local to vendorTelemetry | `b3e792c8a526403165357c963eb3864d32d2fcba` | `test/device/state.test.ts` |
+| 007 | Removes obsolete wider-guard history; retains present receipt/telemetry rationale and durable IDs | `1de1a61d0bc894a8e9000c28d21c210a0704f2cf` | `test/device/state.test.ts` |
+| 008 | Moves only existing fresh geminiDevice/geminiIdentity functions to a documented, typed concern seed with the approved header | `18e8b83757f7aa1dcf38f8b61cb17ed116e48539` | `test/device/state.test.ts`; new `test/device/stateSeeds.ts` |
+| 009 | Separates non-throwing unknown-snapshot and empty-deviceIds actions from assertions | `df9d37d03fc5f5b8b8e429af0f10b362628c792e` | `test/device/state.test.ts` |
+| 010 | Keeps both desired true/null negative compiler contracts at module scope; removes only their runtime wrappers | `b05e58f75b82510537552109a80601ccf02b7b0c` | `test/device/state.test.ts` |
+
+The earlier header repair remains
+`5808523c26899d15f8f0a4b0be7b147de6863d86` (004, source only).
+The earlier unversioned tracer remains
+`ca8b3ddf2fc9a79f2e6c1afa853e67d1f70db306` (001, owner and report).
+Git object inspection confirms every path above and no tracked-file deletion.
+
+At the repaired revision, key owner locations are first-versioned 371,
+two-device release 568, repeated release 645, unknown release 726,
+notification cases 766/800/875/913/947/996, unknown removal 1051,
+unknown snapshot 1109 and empty identifiers 1122.
+Compile negatives are at 83/91, telemetry local at 216 and rationale at 455.
+Source identity is at 17, public methods 92-128, and relocated removal/release
+notes at 361-400. Seed declarations are at 15/27.
+
+### Preservation and six current seed dispositions
+
+Required keys holding undefined remain required. No optionalization or
+readonly interface change was made: the complete public shapes and the
+class/interface rule distinction still reject those two candidate warnings.
+Public documentation is repaired by 004/005; local naming by 006; rationale
+only by the accepted 007 portion; whole promises by 001/002/003.
+The initial evidence rejects blanket rationale deletion and arbitrary interface
+mutability changes. These decisions retain their independent-review obligation.
+
+SC-03 whole expectations before frozen checks, nested presence assertions,
+version-row canonical refusal reads, metadata-watermark canonical reads and
+released snapshot presence all remain. Scalar receipt/running promises remain
+scalar assertions. Empty notification lists remain whole silence promises.
+Canonical/vendor data field names and all production declarations remain exact.
+
+A TypeScript scanner comparison against the recorded baseline
+`aa826a50a0afeda9a95ab05d38240219bfcb5595` exited 0 and emitted
+`SOURCE_NON_COMMENT_TOKENS_IDENTICAL`. It compares token kind and text with
+trivia omitted, including interface declarations. The complete source change
+is header/documentation/comments; no runtime or type token changed.
+Final source SHA-256:
+`fa30d75b41f52a5914f0debe76843190ec7d428cd760ccdaf42584160bbbfbeb`.
+
+The relocated release notes retain per-controller ownership, fleet disconnection,
+open-socket silence, telemetry reacquisition, bounded first-document ordering,
+clean-session/no-replay, partial merges, heartbeat correction and false-normal
+risks. Existing device/local clock and SC-3 rationale remains unchanged.
+C-002, D-030, D-020, SYNC-03, D-13 and the other existing durable IDs remain.
+
+### Repeated-release assertion control
+
+This is a separate test-fixture control against implemented behavior, not
+production-bug RED. After a successful build, a temporary source change
+restamped receivedAt only for account-1_serial-1 with water_level 4,
+wifi_signal_dbm -54 and an already absent shadow watermark. It isolates the
+second release. The replacement stored expression was:
+
+```typescript
+freeze({ ...snapshot, shadowVersion: undefined, receivedAt: deviceId === 'account-1_serial-1' && snapshot.shadowVersion === undefined && snapshot.data.water_level === 4 && snapshot.metadata.wifi_signal_dbm === -54 ? options.clock.now() : snapshot.receivedAt })
+```
+
+The full TAP owner ran at 2026-10-14T16:18:48.471943Z and ended
+16:18:48.744766Z, exit 1. Exactly the case
+`moves no value and notifies nobody when it runs again on a later poll of the same silence`
+failed with ERR_ASSERTION. It expected receivedAt 1700000777000 and observed
+1700000889000; 53 of 54 tests passed, with zero skipped/cancelled tests.
+The fixed-clock fixture would observe the original timestamp under this mutation.
+
+Mutated source SHA-256:
+`1b125ec5762209f30d50cb526b09d9076f3bcf77a9986e252fbb320bac615a4a`.
+Restored source SHA-256:
+`070c580951f786152b5105da9d6776e742345e1740aec5c5751c1d2d0bda06bd`,
+identical to pre-control bytes. The restored source diff was empty.
+Restored build exited 0 at 16:19:01.993731Z; owner exited 0 at
+16:19:07.406328Z with 54/54; direct selector exited 0 at 16:19:10.736171Z.
+Complete native stdout/stderr, command arrays and timestamps are in
+`/tmp/state-expansion-003-control-owner.json`,
+`/tmp/state-expansion-003-restored-build.json`,
+`/tmp/state-expansion-003-restored-owner.json` and
+`/tmp/state-expansion-003-direct.json`. No mutation was committed.
+
+### Native checks, semantic limits and hooks
+
+Node v26.11.1; npm 11.20.0; installed Fallow 3.27.0. No install or live
+service/hardware run occurred. Source/owner/helper headers were read in full.
+Initial guard exited 0 before edits; the new helper guard also exited 0.
+No architecture zones or policy packs are configured, so zero configured
+violations is not measured architecture compliance.
+
+Before every cause commit, the exact recorded-base command was
+`./node_modules/.bin/fallow audit --base aa826a50a0afeda9a95ab05d38240219bfcb5595 --format json --quiet`.
+Each raw exit was 0 with verdict pass and zero introduced findings.
+The seed audit's stderr reported two cached TypeScript entry points outside
+the temporary root and a resolver/entry-point cache fallback; those diagnostics
+remain in its capture. No unavailable audit was converted into a passing result.
+
+The first Git staging/commit command for 001 exited 128 at index.lock creation
+because the linked worktree Git directory was outside the sandbox write scope.
+It staged nothing and created no commit. The justified elevated retry passed
+ordinary hooks. Later Git commits used that authorized scope. No hook bypass,
+amendment, reset, rebase, stash or history rewrite occurred.
+
+Each cause had fresh build:test, full compiled TAP owner and isolated direct
+coverage, all exit 0. Causes through 009 had 54 runtime tests. Cause 010 keeps
+the two compiler-enforced negatives and reduces runtime tests to 52.
+Pre-step commands used exact changed paths and SKIP=npm-check; actual commit
+hooks had no SKIP override. All normal check:commit hooks passed.
+The seed's staged support path selected all pairs under the existing selector.
+
+The fresh final code checks at b05e58f were:
+build:test 16:28:48.527123Z–16:28:51.135208Z, exit 0;
+full TAP owner 16:28:51.172322Z–16:28:51.429644Z, exit 0, 52/52;
+direct selector 16:28:51.463890Z–16:28:54.829153Z, exit 0.
+The native isolated source-only coverage run ended 16:28:55.157160Z, exit 0:
+lines 264/264, functions 23/23, branches 61/61, all 100%.
+Complete command arrays and native streams are in
+`/tmp/state-expansion-final-build.json`,
+`/tmp/state-expansion-final-owner.json`,
+`/tmp/state-expansion-final-direct.json` and
+`/tmp/state-expansion-final-native.json`.
+Its native TAP and single LCOV record are
+`/tmp/state-expansion-final-native.tap` and
+`/tmp/state-expansion-final-native.lcov`.
+These are focused checks. No full npm run check was run by this fixer;
+the coordinator owns the combined gate.
+
+For 003/005/006/007/008/009/010, full ordinary native captures use
+`/tmp/state-expansion-<suffix>-build.json`, `-owner.json`, `-direct.json`,
+`-audit.json`, `-pre.json` and `-commit.json`; 003 uses the restored build/
+owner names listed above. Earlier 001/002 owner TAP remains in
+`/tmp/state-expansion-001-owner.tap` and
+`/tmp/state-expansion-002-owner.tap`, with raw checks/hooks in the tool record.
+
+Before moving the private seed functions, exact impact queries in both projects
+returned raw 2, export-not-found: they were private locals, not exports.
+That is no semantic no-use proof. Actual definitions and all local calls were
+read. After the move, both seed exports have complete/high-confidence test
+project results, each with only the state owner as direct consumer/targeted test.
+Production project results return raw 0 but status unavailable/no-project,
+because the declaration is outside that project's inputs. They establish no
+absence of consumers. No production API/type change depended on those results.
+The baseline production shape queries remain baseline evidence, not fresh
+queries at the repaired revision.
+
+Fresh post-commit helper query captures, with exact stdout/stderr and raw exits,
+are `/tmp/state-expansion-008-impact-production-geminiDevice.json`,
+`/tmp/state-expansion-008-impact-production-geminiIdentity.json`,
+`/tmp/state-expansion-008-impact-test-geminiDevice.json` and
+`/tmp/state-expansion-008-impact-test-geminiIdentity.json`.
+All four raw exits are 0; semantic completeness differs as stated above.
+The new helper still requires independent full-file review.
+
+### CR-03-STATE-008 pre-step ordering deviation
+
+The exact pre-step was
+`SKIP=npm-check pre-commit run --files test/device/state.test.ts test/device/stateSeeds.ts`.
+At 16:24:48.412373Z–16:24:50.929472Z it exited 1: Prettier collapsed the
+shorter owner type-import block to one line. The seed bytes did not change.
+The fixer staged both formatted paths, then launched the normal foreground
+commit at 16:24:56.976568Z before repeating the pre-step. This ordering
+violated the required repeat-until-clean sequence.
+
+Commit `18e8b83757f7aa1dcf38f8b61cb17ed116e48539` ended at
+16:25:13.448419Z, exit 0, with all applicable normal hooks passing.
+Inspection confirmed only the owner and new seed were committed.
+The late exact pre-step on those committed bytes ran
+16:25:39.507049Z–16:25:41.809937Z, exit 0, and changed no bytes.
+It does not retroactively prove ordering compliance. The deviation was
+reported to the parent/coordinator before remaining cause work; continuation
+was explicitly authorized. No history was rewritten. The 009 and 010 clean
+pre-steps were observed before staging/committing their corresponding changes.
+
+The complete ordering evidence remains in
+`/tmp/state-expansion-008-pre.json`,
+`/tmp/state-expansion-008-commit.json` and
+`/tmp/state-expansion-008-pre-late-repeat.json`.
+This process deviation remains for coordinator disposition. It is not a
+production defect, assertion control or correction review round.
+
+The report-only pre-step at 16:32:05.618960Z–16:32:07.815580Z exited 1
+because end-of-file-fixer removed an extra trailing blank line. It changed
+no executable input. Its capture is `/tmp/state-expansion-report-pre.json`.
+The exact report-only pre-step is repeated after this record addition and
+must pass before the report is committed; its result is supplied at handoff.
+
+## Independent complete correction review: round 1
+
+Reviewer: `/root/phase3_state/state_initial_review`, role gsd-code-reviewer.
+Reviewed at `1166da4d338eea327ceb08da7381dcf4982a6742`; repaired executable
+revision `b05e58f75b82510537552109a80601ccf02b7b0c`. The tree was clean
+before this report update. The complete 419-line source, 1,144-line owner,
+and 29-line new seed helper were reread, including all headers and unchanged
+code. AGENTS, the current plan/context/protocol/report, Phase 1 SC-03 proof,
+and all five complete relevant rulebooks were reread. Configured skill
+resolution remains comments/style/unit-review; writer/local-verification
+were additionally applied. Initial history, controls and actual commits above
+are preserved.
+
+Current Git blob identities:
+
+- source: `ccee11846085280f5618622a36d19b5ba511643d`;
+- owner: `fb738ab8f118a7f746b57412a5d2551739593db2`;
+- helper: `bdf56c4ebaf3cd07b6c2c2a26c29181367aab1e6`.
+
+### D-03 verdict determined before report mutation
+
+| Round | Opening | Fixed | Rejected | New | Reopened | Closing |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 10 | 10 | 0 | 1 | 0 | 1 |
+
+Open IDs: `CR-03-STATE-011` only, WARNING. Every initial accepted ID is fixed.
+No fixed finding or SC-03 reopened. Closing 1 is lower than opening 10, and
+this is correction round 1, not round 4. Therefore D-03 does not trigger a
+global stop. This verdict was sent to the coordinator before updating the
+report. Further correction must retain the original STATE counter; the batch
+is not clean or closed.
+
+### Independently confirmed initial-ID outcomes
+
+Every row retains DEV-01, first review 0, its original severity and exact
+rule/section from the initial narrative. Locations below are at the reviewed
+round-one revision. Actual fixing hashes and committed paths are independently
+matched to Git objects, as recorded above.
+
+| ID | Severity | Current locations | Independent outcome |
+| --- | --- | --- | --- |
+| CR-03-STATE-001 | BLOCKER | owner 350-391,568-599,726-747,996-1033,1051-1070 | Fixed. Complete independently authored unversioned/first-versioned returned and stored snapshots; complete second released device; held snapshot after unknown release/remove; listener-failure returned/stored state before interactions. Tracer commit ca8b3dd plus cause commit 169e4ed. |
+| CR-03-STATE-002 | BLOCKER | owner 32-36,66-69,766-832,875-897,913-979,996-1033 | Fixed. Recorder retains all next/previous/changedKeys arguments. All six notified cases compare independent whole envelopes after returned/stored state, including exact undefined previous on first discovery and structured readings. Commit 3e4ba69. |
+| CR-03-STATE-003 | BLOCKER | owner 645-672 | Fixed. Mutable injected clock advances before both releases; whole canonical snapshot keeps FIRST_RECEIPT, with empty notifications. Separate intended-failure control verified below. Commit f78999a. |
+| CR-03-STATE-004 | WARNING | source 1-15; owner/helper 1-12 | Fixed. Every file has SPDX first, separate copyright and fileoverview JSDoc, then imports with one blank line between sections. Original MIT boundary remains. Source header commit 5808523; helper header introduced with 18e8b83. |
+| CR-03-STATE-005 | WARNING | source 17-24,92-128,360-400 | Fixed. Identity now distinguishes identifying/display facts; public methods describe absence, ownership, clocks, preservation and no-op behavior. Removal/release implementation rationale uses // beside implementation, preserving durable safety IDs. Commit 72417ab. |
+| CR-03-STATE-006 | WARNING | owner 214-226 | Fixed. Only fixture local is vendorTelemetry; canonical data key remains. Commit b3e792c. |
+| CR-03-STATE-007 | WARNING | owner 455-458 | Fixed. No obsolete wider-guard narration remains; current metadata receipt/telemetry ownership rationale and durable IDs remain. Other non-obvious scenario setup explanations are retained. Commit 1de1a61. |
+| CR-03-STATE-008 | WARNING | helper 14-29; owner import 16 and actual calls | Fixed in code. Fresh typed documented seed exports live beside the concern, return new literals, and are actually consumed. Full helper review found no additional seed defect. Commit 18e8b83; its process deviation remains separately disclosed below. |
+| CR-03-STATE-009 | WARNING | owner 1108-1131 | Fixed. Both non-throwing public reads use separate arrange/act/assert sections. Commit df9d37d. |
+| CR-03-STATE-010 | WARNING | owner 83-97 | Fixed. Both meaningful desired true/null negative compiler contracts survive at module level; synthetic runtime wrappers are gone. Runtime owner count is 52 rather than 54 for this stated reason. Commit b05e58f. |
+
+### New WARNING: CR-03-STATE-011 — Named logging arrow lacks its permitted declaration form
+
+**Requirement:** DEV-01. **First review:** 1. **Status:** open.
+**File:** `test/device/state.test.ts:40-43` at
+`1166da4d338eea327ceb08da7381dcf4982a6742`.
+**Rule:** Google style review, Functions:
+“A named function is a function declaration; an arrow assigned to const only
+for an explicit function type or a nested function needing the outer this.”
+**Issue:** `createRecordingLog` assigns the named function `record` to a
+const arrow. The binding has no explicit function-type annotation and the
+function does not need an outer this. Parameter/return annotations on the
+arrow do not provide the required explicit function-type binding. It is
+the only matching named const-arrow helper in the three reviewed files.
+**Fix:** Use a local `function record(message: string): void` declaration
+with the same messages.push body. Preserve all Logging members, call behavior,
+safe listener-error observations and exact payload expectations.
+**Independent evidence:** The complete helper and its uses at owner 45-55
+were read, and the Functions exception was checked against the actual body.
+This unchanged helper was missed in initial triage; it is a newly discovered
+cause, not recurrence of any fixed ID. No production behavior defect or
+unchanged-production RED is asserted. Fix/evidence commit hashes remain absent.
+
+### Six seed dispositions at round one
+
+| Seed | Current independent disposition |
+| --- | --- |
+| Required undefined versus optional shape | Rejection retained. Source 47-71 and complete constructors 206-214/263-271 keep every required key present; no optionalization. Original exact-consumer and constructor evidence remains applicable to unchanged declarations. |
+| Snapshot readonly members | Rejection retained. Source 33-52 remains an interface; class-only readonly rule does not establish a violation. Runtime freeze 150-170 remains. No invented interface rule or new writable-nested-alias contract. |
+| Public JSDoc versus implementation notes | Fixed by 004/005 at the source locations in the outcome table. |
+| Local data naming versus canonical field | Fixed by 006; owner 216-222 uses vendorTelemetry and preserves the data field. |
+| In-case rationale | Accepted obsolete-history part fixed by 007 at 455-458; blanket deletion remains rejected. Retained blocks at 482-485,641-644,695-698,723-725 explain non-obvious setup/ownership. |
+| Incomplete whole promises | Fixed by 001/002/003. Whole callback and canonical observations are independent; actual scalar promises and empty notification lists remain appropriately scoped. |
+
+### SC-03 and executable-preservation inspection
+
+SC-03 remains fixed: complete discovery snapshot before frozen checks
+236-249; nested telemetry with shape/presence 260-270; version-row complete
+returns and canonical refusals 327-345; metadata watermark whole return and
+canonical refusal 490-505; nested metadata presence before frozen 530-540;
+merged envelope before frozen 552-563; complete released stored snapshot
+683-692. No required key, nested value, canonical readback or frozen check
+was weakened. No SC-03 reopening occurred.
+
+A fresh read-only TypeScript scanner comparison independently found 1,417
+non-trivia kind/text tokens in both baseline source aa826a5 and current
+1166da4d, with exact equality. Current source SHA-256 independently matches
+`fa30d75b41f52a5914f0debe76843190ec7d428cd760ccdaf42584160bbbfbeb`.
+The approved source changes are documentation/header changes; runtime and
+type declarations remain exact. The original nested-alias candidate
+assessment is retained; no genuine production defect or RED JSON is established.
+
+### Native evidence independently inspected and reused
+
+`git diff b05e58f75b82510537552109a80601ccf02b7b0c -- .
+':(exclude,glob).planning/**/*.md'` was empty, and the tree had no untracked
+executable input. Git confirms HEAD differs from that executable revision
+only by the assigned report. Same-session evidence reuse therefore applies.
+
+- Final build/owner/direct/native JSON captures under
+  `/tmp/state-expansion-final-{build,owner,direct,native}.json` confirm
+  exact command arrays, real UTC timestamps and raw exit 0. Owner/native TAP
+  both record 52 tests, 52 pass, zero fail/skip/cancel/todo. Final native LCOV
+  contains exactly one source record, lines 264/264, functions 23/23,
+  branches 61/61. This is isolated state coverage, not aggregate coverage.
+- Actual normal commit captures for the repaired source, owner and seed
+  show enabled check:commit passing. Those hooks supply static evidence.
+  Seed support staging selected all pairs. Recorded-base audit captures
+  for 003/005/006/007/008/009/010 all have raw exit 0/verdict pass against
+  aa826a5; seed stderr cache/entry-point diagnostics remain preserved.
+- The tracer canonical/envelope control captures each have native exit 1,
+  the intended named tracer ERR_ASSERTION, 53/54 passing and zero skips/
+  cancellations. Their differing stored-water/returned-connectivity failures
+  prove both observations. Restoration captures have matching
+  `070c580951f786152b5105da9d6776e742345e1740aec5c5751c1d2d0bda06bd`
+  source hashes, build 0 and owner 54/54. The saved original source and
+  actual header-commit source independently hash to that same value.
+- The repeated-release control native capture has exit 1 and its intended
+  ERR_ASSERTION: receivedAt 1700000889000 versus 1700000777000, with 53/54.
+  Recorded restored build/owner/direct exits are 0, owner 54/54. Source
+  restoration precedes later documentation commits; no mutation is committed.
+- Helper exact-symbol capture stdout was inspected. Production project
+  status is unavailable/no-project despite raw exit 0, which supplies no
+  no-use proof. Both test-project results are complete/high confidence,
+  identifying only the state owner. Actual imports/calls and complete
+  seed bodies were reread. No new production API depends on unavailable
+  analysis; baseline shared-type evidence is explicitly baseline evidence.
+
+Node v26.11.1 and npm 11.20.0 apply to these runs. No reviewer build, test,
+coverage run, hook, audit, mutation, install, live call or Git/index write
+was performed. The combined npm run check remains coordinator-owned and
+pending; focused results do not close DEV-01 or the phase.
+
+### Disclosed process deviation remains visible
+
+Independent inspection confirms the CR-008 pre-step exited 1 at
+16:24:50.929472Z after formatting the owner import. The enabled normal commit
+started 16:24:56.976568Z and ended 16:25:13.448419Z with exit 0. The clean
+repeat occurred afterward, 16:25:39.507049Z–16:25:41.809937Z, exit 0.
+Those captures and actual commit 18e8b83 support the disclosed ordering
+deviation; the late repeat does not retroactively satisfy the sequence.
+The coordinator's explicit continuation authorization is retained.
+No runtime RED, reopened source finding, extra correction round, history
+rewrite or implied full workflow compliance is invented for this deviation.
+
+Round 1 ends with one open WARNING, CR-03-STATE-011. No global stop applies.
+
+
+## CR-03-STATE-011 applied repair, awaiting round 2
+
+The original STATE correction counter is retained. Independent round 1 remains
+opening 10, fixed 10, rejected 0, new 1, reopened 0, closing 1. Its only
+open ID is CR-03-STATE-011. This repair record does not constitute round 2
+or independently close that ID. D-03 did not trigger a global stop.
+
+The reviewer-authored round-one report was committed before the owner edit:
+`86aff69e860baa581ede8397f0bd8f5a59f266ee`, report path only.
+Its recorded-base Fallow audit exited 0 with verdict pass. The exact report
+pre-step exited 0 at 16:41:55.194161Z, before staging/commit.
+The ordinary enabled-hook commit exited 0 at 16:42:10.881108Z.
+Captures are `/tmp/state-011-round1-report-audit.json`,
+`/tmp/state-011-round1-report-pre.json` and
+`/tmp/state-011-round1-report-commit.json`.
+
+Fixer reread the complete source, owner, seed and applicable rulebooks.
+The actual local record body, Object.assign members, storeOptions,
+fixedStoreOptions and their owner calls were traced. The owner guard ran
+before editing, exit 0; no configured boundary or policy rules exist.
+
+Cause commit: `90dac3919a7dc190ac29defc93b53d6ccd91379d`.
+Actual path: `test/device/state.test.ts` only, two additions/two deletions.
+At owner 41-43, the local const arrow becomes
+`function record(message: string): void`; messages.push and every Logging
+member remain exact. No production source, seed, API/type, test assertion,
+negative compiler contract or safety behavior changes. No test/control was
+added for this declaration-form repair, and no genuine bug RED is claimed.
+All original ten repairs and SC-03 assertions remain.
+
+Fresh checks used the exact owner diff above on
+`86aff69e860baa581ede8397f0bd8f5a59f266ee` before the cause commit.
+They ran serially in the existing feature checkout, isolation none, on Node
+v26.11.1/npm 11.20.0:
+
+| Command/scope | UTC end | Raw exit | Native result |
+| --- | --- | ---: | --- |
+| npm run build:test | 16:42:46.365166Z | 0 | Strict test compilation passes |
+| node --test --test-reporter=tap dist-test/test/device/state.test.js | 16:42:46.659097Z | 0 | 52/52, zero fail/skip/cancel/todo |
+| npm run test:coverage:direct -- src/device/state.ts test/device/state.test.ts | 16:42:50.057282Z | 0 | Isolated state pair passes |
+| Native source-only coverage with TAP/LCOV reporters | 16:42:50.387715Z | 0 | One LCOV record; lines 264/264, functions 23/23, branches 61/61 |
+
+Exact command arrays, complete stdout/stderr, timestamps and exits are in
+`/tmp/state-011-build.json`, `/tmp/state-011-owner.json`,
+`/tmp/state-011-direct.json` and `/tmp/state-011-native.json`.
+Native outputs are `/tmp/state-011-native.tap` and
+`/tmp/state-011-native.lcov`. The 52 runtime cases retain both module-level
+negative compile checks. These are focused checks; full npm run check remains
+coordinator-owned and was not run here.
+
+Before the cause commit, the exact Fallow audit against
+`aa826a50a0afeda9a95ab05d38240219bfcb5595` exited 0, verdict pass,
+zero introduced findings. The exact pre-step
+`SKIP=npm-check pre-commit run --files test/device/state.test.ts`
+exited 0 at 16:43:13.426219Z before staging and ordinary commit.
+The commit started 16:43:25.039603Z and ended 16:43:38.902686Z, exit 0,
+with all applicable normal hooks, including check:commit, passing.
+Captures: `/tmp/state-011-guard.json`, `/tmp/state-011-audit.json`,
+`/tmp/state-011-pre.json` and `/tmp/state-011-commit.json`.
+No failed hook, formatter change, ordering deviation or Git retry occurred
+in this correction pass.
+
+Owner SHA-256:
+`1f389ce978f1192fa614edf53ae404b6c39cd722c3f59bf38fdd3d534554008d`.
+Production and seed diffs against 86aff69e were empty; their SHA-256 values
+remain `fa30d75b41f52a5914f0debe76843190ec7d428cd760ccdaf42584160bbbfbeb`
+and `5137654a777ab56cc23fcee351defd63dff7ce53e960b84edf31b784f7aae57e`.
+The cause commit deletes no tracked file. The existing CR-008 process
+deviation remains disclosed and is not retroactively declared compliant.
+Full independent round 2 is the next step.
+
+## Independent complete correction review: round 2
+
+Reviewer: `/root/phase3_state/state_initial_review`, role gsd-code-reviewer.
+Reviewed revision: `ade72e10f4ddd584067b080d1f78323fc93d3762`.
+Executable revision: `90dac3919a7dc190ac29defc93b53d6ccd91379d`.
+The tree was clean before this report update. Complete source (419 lines),
+owner (1,144 lines), and concern seed (29 lines) were reread, including every
+header, helper, unchanged case, clock fixture, compiler contract and public
+assertion. AGENTS, current report, review protocol, Phase 1 SC-03 proof and
+all five complete TypeScript rulebooks were reread. Configured skill mapping
+remains comments/style/unit-review; writer/local-verification also apply.
+
+### D-03 verdict before report mutation
+
+| Round | Opening | Fixed | Rejected | New | Reopened | Closing |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 10 | 10 | 0 | 1 | 0 | 1 |
+| 2 | 1 | 1 | 0 | 0 | 0 | 0 |
+
+Round 2 opens only CR-03-STATE-011 and fixes that ID. Open IDs: **none**.
+All ten earlier accepted causes remain fixed. No new finding or reopened
+finding, including SC-03, was found. Closing is zero and this is round 2;
+no D-03 condition triggers a global stop. These exact counts and the verdict
+were sent to the coordinator before this report update. The original STATE
+counter was retained throughout both correction rounds.
+
+### Final independent outcomes and current locations
+
+Every location below is at ade72e10. Every ID retains its original requirement
+DEV-01, severity, rule/section, first-review record and fixing commit from the
+history above. The outcome table results from the complete reread, rather
+than from accepting the fixer's report or passing checks as proof of correctness.
+
+| ID | Final outcome | Current verified locations |
+| --- | --- | --- |
+| CR-03-STATE-001 | Fixed; complete independent promised returned/stored snapshots remain | owner 350-391,568-599,726-747,996-1033,1051-1070 |
+| CR-03-STATE-002 | Fixed; whole next/previous/changedKeys callbacks remain, with public state before interactions | owner 32-36,66-69,766-832,875-897,913-979,996-1033 |
+| CR-03-STATE-003 | Fixed; later injected times remain discriminating, receipt stays FIRST_RECEIPT | owner 645-672 |
+| CR-03-STATE-004 | Fixed; all three complete SPDX/copyright/fileoverview/import headers meet D-01 | source 1-15; owner 1-21; helper 1-12 |
+| CR-03-STATE-005 | Fixed; public contracts and identity distinctions remain; implementation safety rationale remains correctly placed | source 17-24,92-128,360-400 |
+| CR-03-STATE-006 | Fixed; writable fixture is vendorTelemetry, public data remains unchanged | owner 214-226 |
+| CR-03-STATE-007 | Fixed; present metadata/ownership rationale remains without obsolete-guard history | owner 455-458 |
+| CR-03-STATE-008 | Fixed in code; documented typed seeds return fresh literals, with actual owner consumers | helper 14-29; owner 16 and call sites |
+| CR-03-STATE-009 | Fixed; non-throwing reads retain separate AAA phases | owner 1108-1131 |
+| CR-03-STATE-010 | Fixed; both desired true/null negative compile contracts remain at module scope | owner 83-97 |
+| CR-03-STATE-011 | Fixed; local record is a named function declaration, with unchanged push body and Logging assignments | owner 40-55; cause commit 90dac3919a7dc190ac29defc93b53d6ccd91379d |
+
+The sole owner difference since round one is the declaration at 41 and closing
+brace at 43. Git inspection confirms the cause commit changes only the owner,
+two additions/two deletions. It adds no test hook, export, assertion, exception
+or new behavior. Source and seed are byte-identical to round one. Complete
+scans found no further applicable finding in these three files. Required
+public shapes, immutable runtime observations, writable top-level fixture
+input, monotonic refusals, named-device release, opaque records and separate
+device/local clocks remain intact. The nested-alias assessment remains bounded
+by the existing JSON/readonly ingress contract; no arbitrary new contract is
+introduced or production bug RED claimed.
+
+### Six seed dispositions and SC-03 retained
+
+| Seed | Final independent disposition at ade72e10 |
+| --- | --- |
+| Required undefined versus optional shape | Rejected as a defect; required source keys at 47-71 and complete constructors 206-214/263-271 remain. |
+| Snapshot readonly members | Rejected as a mandatory interface defect; source 33-52 remains an interface, with runtime deep freeze 150-170. Class-only rule does not justify changing it. |
+| Public JSDoc versus implementation notes | Fixed by 004/005; source 92-128 states public behavior and 360-400 holds implementation rationale. |
+| Local data naming versus canonical field | Fixed by 006; owner 216-222 uses vendorTelemetry, canonical data remains. |
+| In-case rationale | Accepted obsolete narration fixed by 007 at 455-458; blanket deletion stays rejected, with non-obvious setup rationale retained. |
+| Incomplete whole promises | Fixed by 001/002/003; whole canonical and callback assertions remain independent and discriminating. Actual scalar and empty-list promises remain valid. |
+
+SC-03 remains fixed at owner 236-249,260-270,327-345,490-505,530-540,
+552-563 and 683-692. Complete snapshot/nested expectations still precede
+frozen checks; stale-version and metadata watermark refusals still inspect
+whole canonical storage. No frozen check can pass solely because its value
+is absent. All three Phase 3 assertion controls and exact restorations remain
+in the report and evidence paths verified during round one; CR-011 changes
+none of their target assertions or production code. No control is presented
+as a genuine production bug.
+
+### Exact-input native verification reused
+
+The reviewer independently inspected `/tmp/state-011-build.json`,
+`/tmp/state-011-owner.json`, `/tmp/state-011-direct.json`,
+`/tmp/state-011-native.json` and the native TAP/LCOV files. Exact command arrays,
+UTC start/end times, stdout/stderr and raw exits support the following:
+
+| Command/scope | Start/end UTC | Exit | Observed result |
+| --- | --- | ---: | --- |
+| npm run build:test | 16:42:43.370491–16:42:46.365166 | 0 | Strict test compilation |
+| node --test --test-reporter=tap dist-test/test/device/state.test.js | 16:42:46.400890–16:42:46.659097 | 0 | 52 tests, 52 pass; zero fail/skip/cancel/todo |
+| npm run test:coverage:direct -- src/device/state.ts test/device/state.test.ts | 16:42:46.694803–16:42:50.057282 | 0 | Isolated state pair passes |
+| Native source-only TAP/LCOV coverage command retained in state-011-native.json | 16:42:50.092142–16:42:50.387715 | 0 | Exactly one source record: lines 264/264, functions 23/23, branches 61/61; native TAP 52/52 |
+
+The verified commands used the exact final owner diff before its commit.
+`git diff 90dac3919a7dc190ac29defc93b53d6ccd91379d -- .
+':(exclude,glob).planning/**/*.md'` is empty; no untracked executable inputs
+exist. Actual current blobs are source
+`ccee11846085280f5618622a36d19b5ba511643d`, owner
+`bc47c2e3fbf5f0ed48a10c549a80446923f25570`, helper
+`bdf56c4ebaf3cd07b6c2c2a26c29181367aab1e6`.
+Their independently calculated SHA-256 values match the recorded exact inputs:
+
+- source: `fa30d75b41f52a5914f0debe76843190ec7d428cd760ccdaf42584160bbbfbeb`;
+- owner: `1f389ce978f1192fa614edf53ae404b6c39cd722c3f59bf38fdd3d534554008d`;
+- helper: `5137654a777ab56cc23fcee351defd63dff7ce53e960b84edf31b784f7aae57e`.
+
+Thus local-verification same-session exact-input reuse applies. The unchanged
+source also retains round one's independently proved 1,417-token equality
+with aa826a5. Node v26.11.1/npm 11.20.0 apply. The two preserved compile
+contracts explain the runtime count reduction from 54 to 52; no runtime
+target is skipped or hidden.
+
+Native pre-step capture has exit 0 and end 16:43:13.426219Z, before the
+ordinary cause commit started 16:43:25.039603Z and ended 16:43:38.902686Z,
+exit 0. Its enabled check:commit hook passed, supplying applicable fresh
+static evidence. The audit capture has raw exit 0/verdict pass, exact base
+aa826a50a0afeda9a95ab05d38240219bfcb5595 and pre-commit head 86aff69.
+No late repeat or failed hook occurred for CR-011. The earlier CR-008 ordering
+deviation and explicit continuation authorization remain visible; this clean
+code verdict does not retroactively certify that sequence.
+
+The reviewer ran no build, owner test, direct coverage, hook, audit, mutation,
+install, live call or Git/index write. Only this assigned report was updated
+after the D-03 verdict. Combined npm run check remains coordinator-owned
+and pending. STATE review is clean with zero open IDs; this focused result
+does not complete overall DEV-01, the combined gate, or the phase seal.

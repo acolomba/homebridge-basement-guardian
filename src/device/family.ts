@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview The contract one device family implements to turn an opaque
  * snapshot into meaning.
@@ -21,6 +26,15 @@ export type DeviceCapability = 'self-test' | 'alarm-mute';
 /** How one field failed its family's contract. */
 export type FieldViolationReason = 'missing' | 'wrong-type' | 'out-of-domain';
 
+/**
+ * The scope a field violation costs: a safety trust scope, or `metadata` for a
+ * field that no safety trust scope owns.
+ *
+ * Firmware metadata feeds AccessoryInformation, but a violation on it records
+ * the invalid field without deactivating a safety scope.
+ */
+export type FieldScope = TrustScope | 'metadata';
+
 /** One field a snapshot did not supply in the form the family requires. */
 export interface FieldViolation {
   field: string;
@@ -29,10 +43,20 @@ export interface FieldViolation {
    * The scope that stops being trustworthy while this field is invalid.
    *
    * One bad field deactivates one scope, never the whole device (D-014).
-   * `undefined` marks a field no published service reads, so a violation on it
-   * is still recorded and diagnosable without deactivating anything.
+   * `metadata` deactivates no safety scope.
    */
-  scope: TrustScope | undefined;
+  scope: FieldScope;
+}
+
+/** A snapshot whose family fields all satisfy their contracts. */
+export interface ValidFamilyValidation {
+  valid: true;
+}
+
+/** A snapshot with field violations that identify the affected trust scopes. */
+export interface RejectedFamilyValidation {
+  valid: false;
+  violations: readonly FieldViolation[];
 }
 
 /**
@@ -44,7 +68,7 @@ export interface FieldViolation {
  * did not fully validate and is self-guarding, so a vendor schema change never
  * becomes a confidently wrong reading (D-014).
  */
-export type FamilyValidation = { valid: true } | { valid: false; violations: readonly FieldViolation[] };
+export type FamilyValidation = ValidFamilyValidation | RejectedFamilyValidation;
 
 /**
  * The request body the vendor device-data route accepts.
@@ -192,6 +216,8 @@ export interface DeviceFamily<TDomainState> {
    * on the first malformed value the vendor sends.
    */
   decode(snapshot: DeviceSnapshot): TDomainState;
+  /** Lists the device controls the family supports for the decoded state. */
   capabilities(state: TDomainState): readonly DeviceCapability[];
+  /** Builds the family's desiredData body for the requested control state; reported state remains authoritative. */
   command(capability: DeviceCapability, requested: boolean): FamilyCommand;
 }

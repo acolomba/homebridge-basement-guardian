@@ -1,11 +1,20 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Stores immutable canonical device snapshots and reported state.
+ */
+
 import { isDeepStrictEqual } from 'node:util';
 
 import type { ApiConnectivity, ApiDevice } from '../cloud/types.js';
 import type { Clock } from '../runtime/clock.js';
 import type { Logging } from 'homebridge';
 
-/** The device facts that identify one physical system and never change. */
+/** The identifying and display facts for one physical system (C-002, D-030). */
 export interface DeviceIdentity {
   /** The vendor identifier. It seeds the accessory UUID and is immutable. */
   deviceId: string;
@@ -66,9 +75,9 @@ export interface ReportedPatch {
  * Receives one canonical state change for one device.
  *
  * `changedKeys` names the telemetry keys whose values differ, in a stable
- * order, so a consumer filters on the list instead of comparing snapshots
- * again. Comparing again is where duplicate activation records come from
- * (D-19).
+ * order. It is empty for an accepted heartbeat that repeats the stored
+ * telemetry, so consumers can update trust time without counting another
+ * activation (D-19).
  */
 export type DeviceSnapshotListener = (next: DeviceSnapshot, previous: DeviceSnapshot | undefined, changedKeys: readonly string[]) => void;
 
@@ -80,8 +89,15 @@ export interface DeviceStateStoreOptions {
 
 /** Holds one immutable snapshot per device. */
 export interface DeviceStateStore {
+  /** Returns the stored snapshot, or undefined for an undiscovered device. */
   snapshot(deviceId: string): DeviceSnapshot | undefined;
+  /** Lists every device identifier currently held by the store. */
   deviceIds(): readonly string[];
+  /**
+   * Refreshes identity, reachability and device time from one REST discovery.
+   * Records local receipt time separately and replaces telemetry only while
+   * the shadow holds no ownership watermark. Preserves shadow metadata.
+   */
   applyDiscovery(device: ApiDevice): DeviceSnapshot;
   /**
    * Merges one reported patch into the stored snapshot.
@@ -93,56 +109,24 @@ export interface DeviceStateStore {
   /**
    * Drops the stored snapshot and every registered listener for `deviceId`.
    *
-   * A `deviceId` the store never held is a no-op. This is what lets a later
-   * `applyDiscovery` for the same `deviceId` start a fresh observation epoch
-   * (D-020): with no previous snapshot, `toSnapshot` takes the same
-   * `previous === undefined` branch a brand-new device takes.
+   * An unknown device is a no-op. Rediscovery starts a fresh observation epoch
+   * (D-020).
    */
   remove(deviceId: string): void;
   /**
    * Registers a listener for one device and returns its unsubscribe function.
    *
-   * A change that leaves every telemetry value where it was notifies nobody,
-   * which is what keeps a repeated heartbeat silent.
+   * An accepted telemetry heartbeat notifies listeners even when its values
+   * are unchanged. Rejected patches and documents without telemetry do not.
    */
   subscribe(deviceId: string, listener: DeviceSnapshotListener): () => void;
   /**
-   * Reports that the shadow is no longer the source of telemetry for one
-   * device.
-   *
-   * Clearing that device's watermark hands its telemetry back to the poll and
-   * lets the complete shadow requested after a reconnect be applied rather than
-   * refused as stale, which is what makes the reconnect refresh restore
-   * anything (SYNC-03). A caller handing back a whole fleet loops, which is
-   * what keeps a fact about one controller from being spent on its neighbours:
-   * a healthy pump released alongside a silent one has every poll overwrite the
-   * fresher readings its own live path just delivered. A `deviceId` the store
-   * does not hold changes nothing.
-   *
-   * Two conditions call for it. A connection that ended is one, and that one is
-   * genuinely fleet-wide, because the connection carried every device. A device
-   * the monitoring-trust projection reports silent, with its socket still open,
-   * is the other, and it is the one an owner meets: silence is not a
-   * disconnection, it belongs to one controller, and a poll that cannot refresh
-   * that controller's telemetry leaves a flooding pit unreported (D-13). It is
-   * therefore reachable on every poll of a silence that can last hours, which
-   * it is written to cost nothing.
-   *
-   * Ownership returns on the next document carrying an observation, through
-   * `applyReportedPatch`: with no watermark held the patch is not stale, and
-   * `nextShadowVersion` establishes the watermark again. Nothing else restores
-   * it, and a document that observed nothing does not, so REST keeps feeding
-   * telemetry until a real report arrives.
-   *
-   * It also gives up out-of-order protection for the first document after a
-   * release, which silence triggers on the same terms as a reconnect rather
-   * than on new ones. That is bounded: the connection is opened with a clean session
-   * and no replay, so no queued backlog can arrive out of order, and a document
-   * that did arrive late still carries telemetry the device genuinely sent and
-   * merges key by key, with the next heartbeat correcting it. The alternative
-   * is a silently discarded refresh, which is a false normal.
+   * Hands one device's telemetry back to polling. A silence keeps the current
+   * connection's version fence; a disconnect permits a reconnect refresh.
+   * Preserves observed values and receipt time, and notifies no listener.
+   * An unknown device is a no-op; repeated releases leave observations unchanged.
    */
-  releaseShadowSource(deviceId: string): void;
+  releaseShadowSource(deviceId: string, reason: 'silence' | 'disconnect'): void;
 }
 
 const NO_LISTENERS: ReadonlySet<DeviceSnapshotListener> = new Set();
@@ -155,7 +139,7 @@ function mergeRecord(base: Readonly<Record<string, unknown>>, patch: Readonly<Re
 }
 
 // Shadow delivery can arrive out of order or twice, so a patch may only move
-// the version forward. A patch carrying no version is always applied.
+// the version forward.
 function isStalePatch(applied: number | undefined, incoming: number | undefined): boolean {
   return applied !== undefined && incoming !== undefined && incoming <= applied;
 }
@@ -231,11 +215,39 @@ function toSnapshot(device: ApiDevice, previous: DeviceSnapshot | undefined, rec
   });
 }
 
-// Whether the message said anything about the device at all. A document with
-// neither reported section observed nothing: the vendor publishes one on every
-// command it delivers, as the accepted update for a desired-only write.
+// An empty telemetry object has no reading. It cannot claim ownership or
+// restamp receipt time, but a reported metadata section still observes the device.
+function hasTelemetryReading(patch: ReportedPatch): boolean {
+  return patch.data !== undefined && Object.keys(patch.data).length > 0;
+}
+
+// A document with neither a telemetry reading nor a reported metadata section
+// observed nothing. The vendor also publishes documents for desired-only writes.
 function carriesObservation(patch: ReportedPatch): boolean {
-  return patch.data !== undefined || patch.state !== undefined;
+  return hasTelemetryReading(patch) || patch.state !== undefined;
+}
+
+// A silence fence on one device. A device with no entry in the fence map is not
+// fenced. A fence with no `version` was set while the device held no shadow
+// version, so it refuses only versionless telemetry; a fence with a `version`
+// also refuses any patch at or below that version.
+interface SilenceFence {
+  version?: number;
+}
+
+// While a silence fence holds, the store refuses a patch at or below the
+// fenced version, and a versionless patch that carries a telemetry reading. A
+// versionless patch that carries only metadata still applies.
+function isFencedOut(fence: SilenceFence | undefined, patch: ReportedPatch): boolean {
+  if (fence === undefined) {
+    return false;
+  }
+
+  if (patch.version === undefined) {
+    return hasTelemetryReading(patch);
+  }
+
+  return fence.version !== undefined && patch.version <= fence.version;
 }
 
 // A watermark is ordering information, so a document that observed nothing is
@@ -245,13 +257,11 @@ function carriesObservation(patch: ReportedPatch): boolean {
 // strength of having seen nothing, freezing telemetry at whatever the poll last
 // wrote (SYNC-02, D-014).
 //
-// The section ownership governs is the telemetry one, which is why this reads
-// `patch.data` rather than the wider observation test above. That member is
-// absent for two inputs, not one: a document that carried no telemetry section,
-// and a document that carried one which is not an object. `toReportedPatch`
-// keeps the section only when `isRecord` accepts it.
+// The section ownership governs is telemetry, so this checks for a reading
+// rather than using the wider observation test. The data section can be
+// missing, invalid, or empty. `toReportedPatch` drops invalid sections.
 //
-// Nothing upstream refuses the second input. Validation above checks only
+// Nothing upstream refuses an invalid data section. Validation above checks only
 // two levels -- the payload is an object and its `state` is an object -- and
 // says nothing about `reported` or the sections under it, so a truncated or
 // corrupt telemetry section parses, validates, and arrives here with the
@@ -262,7 +272,7 @@ function carriesObservation(patch: ReportedPatch): boolean {
 // the poll while the same message keeps the silence rule quiet, leaving nothing
 // to hand them back (CR-03).
 function nextShadowVersion(previous: DeviceSnapshot, patch: ReportedPatch): number | undefined {
-  if (patch.data === undefined && previous.shadowVersion === undefined) {
+  if (!hasTelemetryReading(patch) && previous.shadowVersion === undefined) {
     return undefined;
   }
 
@@ -302,10 +312,9 @@ function isSameValue(previous: unknown, next: unknown): boolean {
 // tier's to decide, downstream of here (D-19, D-20).
 //
 // Teaching a family adapter's notion of relevance to this function would be a
-// safety regression rather than a saving. `notify` returns on an empty changed
-// list, and that notification is the only path a between-poll pump run reaches
-// HomeKit on, so a key the filter judged uninteresting would silently suppress
-// the live update for a running pump (SAFE-03, SAFE-07).
+// safety regression. The changed-key list is the only clue a listener has that
+// a pump value moved, so filtering a pump key would hide its activation from
+// HomeKit (SAFE-03, SAFE-07).
 function changedKeys(previous: Readonly<Record<string, unknown>>, next: Readonly<Record<string, unknown>>): readonly string[] {
   const keys = new Set([...Object.keys(previous), ...Object.keys(next)]);
 
@@ -315,10 +324,16 @@ function changedKeys(previous: Readonly<Record<string, unknown>>, next: Readonly
 // One listener's failure is contained: the others still run and the reducer
 // still returns. The report names no listener and repeats no state, because a
 // listener's own message can carry both.
-function notify(listeners: ReadonlySet<DeviceSnapshotListener>, log: Logging, next: DeviceSnapshot, previous: DeviceSnapshot | undefined): void {
+function notify(
+  listeners: ReadonlySet<DeviceSnapshotListener>,
+  log: Logging,
+  next: DeviceSnapshot,
+  previous: DeviceSnapshot | undefined,
+  telemetryObserved = false,
+): void {
   const changed = changedKeys(previous === undefined ? {} : previous.data, next.data);
 
-  if (changed.length === 0) {
+  if (changed.length === 0 && !telemetryObserved) {
     return;
   }
 
@@ -341,6 +356,7 @@ function notify(listeners: ReadonlySet<DeviceSnapshotListener>, log: Logging, ne
 export function createDeviceStateStore(options: DeviceStateStoreOptions): DeviceStateStore {
   const snapshots = new Map<string, DeviceSnapshot>();
   const listeners = new Map<string, Set<DeviceSnapshotListener>>();
+  const silenceFences = new Map<string, SilenceFence>();
 
   return {
     snapshot(deviceId: string): DeviceSnapshot | undefined {
@@ -363,29 +379,71 @@ export function createDeviceStateStore(options: DeviceStateStoreOptions): Device
     applyReportedPatch(deviceId: string, patch: ReportedPatch): DeviceSnapshot | undefined {
       const previous = snapshots.get(deviceId);
 
-      if (previous === undefined || isStalePatch(previous.shadowVersion, patch.version)) {
+      if (previous === undefined || isFencedOut(silenceFences.get(deviceId), patch) || isStalePatch(previous.shadowVersion, patch.version)) {
         return previous;
       }
 
       const snapshot = nextSnapshot(previous, patch, options.clock.now());
       snapshots.set(deviceId, snapshot);
-      notify(listeners.get(deviceId) ?? NO_LISTENERS, options.log, snapshot, previous);
+      if (silenceFences.has(deviceId) && patch.version !== undefined) {
+        if (snapshot.shadowVersion === undefined) {
+          silenceFences.set(deviceId, { version: patch.version });
+        } else {
+          silenceFences.delete(deviceId);
+        }
+      }
+
+      notify(listeners.get(deviceId) ?? NO_LISTENERS, options.log, snapshot, previous, hasTelemetryReading(patch));
 
       return snapshot;
     },
 
     remove(deviceId: string): void {
+      // With no previous snapshot, rediscovery takes the new-device branch of
+      // toSnapshot and starts a fresh observation epoch (D-020).
       snapshots.delete(deviceId);
       listeners.delete(deviceId);
+      silenceFences.delete(deviceId);
     },
 
-    // Nobody is notified: clearing the watermark moves no telemetry key, and a
-    // listener filtering on the change report would be handed a change that
-    // did not happen.
-    releaseShadowSource(deviceId: string): void {
+    // Hands one device's telemetry back to the poll by clearing its ownership
+    // watermark. Nobody is notified: clearing the watermark moves no telemetry
+    // key, and a listener filtering on the change report would be handed a
+    // change that did not happen. A `deviceId` the store does not hold changes
+    // nothing.
+    //
+    // The release is per device, so a caller handing back a whole fleet loops.
+    // That keeps a fact about one controller from being spent on its
+    // neighbours: a healthy pump released alongside a silent one would have
+    // every poll overwrite the fresher readings its own live path just
+    // delivered.
+    //
+    // Two conditions call for it. A connection that ended is one, and that one
+    // is genuinely fleet-wide, because the connection carried every device. A
+    // device the monitoring-trust projection reports silent, with its socket
+    // still open, is the other, and it is the one an owner meets: silence is not
+    // a disconnection, it belongs to one controller, and a poll that cannot
+    // refresh that controller's telemetry leaves a flooding pit unreported
+    // (D-13). It therefore runs on every poll of a silence that can last hours,
+    // so it is written to cost nothing.
+    //
+    // A disconnect also clears the version fence, so a reconnect's complete
+    // shadow can start a new stream (SYNC-03). A still-open silent connection
+    // keeps its last accepted version, so only newer telemetry can take
+    // ownership back from REST. Repeated silent polls keep that fence;
+    // disconnect and removal start a fresh version epoch.
+    releaseShadowSource(deviceId: string, reason: 'silence' | 'disconnect'): void {
       const snapshot = snapshots.get(deviceId);
 
+      if (reason === 'disconnect') {
+        silenceFences.delete(deviceId);
+      }
+
       if (snapshot !== undefined) {
+        if (reason === 'silence' && !silenceFences.has(deviceId)) {
+          silenceFences.set(deviceId, snapshot.shadowVersion === undefined ? {} : { version: snapshot.shadowVersion });
+        }
+
         snapshots.set(deviceId, freeze({ ...snapshot, shadowVersion: undefined }));
       }
     },

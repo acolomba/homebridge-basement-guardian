@@ -20,7 +20,7 @@
     "ui_safety_gate": false,
     "ui_review": false,
     "test_command": "npm run check",
-    "use_worktrees": true,
+    "use_worktrees": false,
     "research_before_questions": true,
     "nyquist_validation": true,
     "ai_integration_phase": true,
@@ -49,7 +49,8 @@
     "post_planning_gaps": true,
     "security_enforcement": true,
     "security_asvs_level": 1,
-    "security_block_on": "high"
+    "security_block_on": "high",
+    "_auto_chain_active": false
   },
   "effort": {
     "agent_overrides": {
@@ -65,42 +66,17 @@
     }
   },
   "agent_skills": {
-    "gsd-executor": [
-      "skills/typescript-comments",
-      "skills/typescript-unit-testing",
-      "skills/typescript-google-style-review",
-      "skills/local-verification",
-      "skills/cucumber-behavioral-testing"
+    "gsd-discuss-phase": [
+      ".agents/skills/typescript-unit-tests",
+      ".agents/skills/cucumber"
     ],
-    "gsd-debugger": [
-      "skills/typescript-comments",
-      "skills/typescript-unit-testing",
-      "skills/typescript-google-style-review",
-      "skills/local-verification",
-      "skills/cucumber-behavioral-testing"
+    "gsd-advisor-researcher": [
+      ".agents/skills/typescript-unit-tests",
+      ".agents/skills/cucumber"
     ],
-    "gsd-code-fixer": [
-      "skills/typescript-comments",
-      "skills/typescript-unit-testing",
-      "skills/typescript-google-style-review",
-      "skills/local-verification"
-    ],
-    "gsd-nyquist-auditor": [
-      "skills/typescript-comments",
-      "skills/typescript-unit-testing",
-      "skills/typescript-google-style-review"
-    ],
-    "gsd-code-reviewer": [
-      "skills/typescript-comments",
-      "skills/typescript-google-style-review",
-      "skills/typescript-unit-testing-review"
-    ],
-    "gsd-verifier": [
-      "skills/typescript-unit-testing-review",
-      "skills/local-verification"
-    ],
-    "gsd-planner": [
-      "skills/local-verification"
+    "gsd-assumptions-analyzer": [
+      ".agents/skills/typescript-unit-tests",
+      ".agents/skills/cucumber"
     ]
   },
   "mode": "interactive",

@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Supplies elapsed time in whole milliseconds.
+ */
+
 /**
  * Source of forward-only elapsed time.
  *

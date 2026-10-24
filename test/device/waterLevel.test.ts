@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Checks the provisional water-level ladder and flood threshold.
+ */
+
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
@@ -13,20 +23,30 @@ describe('waterLevelPercentage', () => {
     { code: 31, percentage: 100 },
   ]) {
     test(`SAFE-01 reports water_level ${String(code)} as ${String(percentage)} percent`, () => {
-      // act & assert
-      assert.strictEqual(waterLevelPercentage(code), percentage);
+      // arrange
+      const waterLevelCode = code;
+      const expectedPercentage = percentage;
+
+      // act
+      const levelPercentage = waterLevelPercentage(waterLevelCode);
+
+      // assert
+      assert.strictEqual(levelPercentage, expectedPercentage);
     });
   }
 
   for (const code of [2, 16, 30, 32, -1, 1.5]) {
     test(`SAFE-01 refuses to invent a level for the illegal code ${String(code)}`, () => {
+      // arrange
+      const waterLevelCode = code;
+      const expectedMessage = `waterLevelPercentage() has no level for water_level ${String(code)}; validate() must reject this snapshot first`;
+
       // act & assert
       assert.throws(
-        () => waterLevelPercentage(code),
+        () => waterLevelPercentage(waterLevelCode),
         (error: unknown) => {
           assert.ok(error instanceof TypeError);
-          assert.ok(error.message.includes(String(code)));
-
+          assert.strictEqual(error.message, expectedMessage);
           return true;
         },
       );
@@ -44,30 +64,44 @@ describe('isPitFlooded', () => {
     { code: 31, flooded: true },
   ]) {
     test(`SAFE-01 reports water_level ${String(code)} as flooded=${String(flooded)}`, () => {
-      // act & assert
-      assert.strictEqual(isPitFlooded(code), flooded);
+      // arrange
+      const waterLevelCode = code;
+      const expectedFlooded = flooded;
+
+      // act
+      const pitFlooded = isPitFlooded(waterLevelCode);
+
+      // assert
+      assert.strictEqual(pitFlooded, expectedFlooded);
     });
   }
 });
 
 describe('PROVISIONAL_WATER_LEVEL_PERCENTAGES', () => {
-  test('D-01 maps the six legal water_level codes and no others', () => {
+  test('D-01 maps the six legal water_level codes to their percentages and no others', () => {
+    // arrange
+    const ladder = PROVISIONAL_WATER_LEVEL_PERCENTAGES;
+
     // act
-    const codes = [...PROVISIONAL_WATER_LEVEL_PERCENTAGES.keys()];
+    const entries = [...ladder.entries()];
 
     // assert
-    assert.strictEqual(PROVISIONAL_WATER_LEVEL_PERCENTAGES.size, 6);
-    assert.deepStrictEqual(codes, [0, 1, 3, 7, 15, 31]);
-  });
-
-  test('D-01 maps those codes to five even steps above zero', () => {
-    // act & assert
-    assert.deepStrictEqual([...PROVISIONAL_WATER_LEVEL_PERCENTAGES.values()], [0, 20, 40, 60, 80, 100]);
+    assert.deepStrictEqual(entries, [
+      [0, 0],
+      [1, 20],
+      [3, 40],
+      [7, 60],
+      [15, 80],
+      [31, 100],
+    ]);
   });
 
   test('D-03 places exactly one legal code at or above the flood threshold', () => {
+    // arrange
+    const ladder = PROVISIONAL_WATER_LEVEL_PERCENTAGES;
+
     // act
-    const floodingCodes = [...PROVISIONAL_WATER_LEVEL_PERCENTAGES.keys()].filter((code) => isPitFlooded(code));
+    const floodingCodes = [...ladder.keys()].filter((code) => isPitFlooded(code));
 
     // assert
     assert.deepStrictEqual(floodingCodes, [31]);
@@ -76,7 +110,13 @@ describe('PROVISIONAL_WATER_LEVEL_PERCENTAGES', () => {
 
 describe('PROVISIONAL_FLOOD_WATER_LEVEL_CODE', () => {
   test('D-03 sets the flood threshold at 31, the only legal code above 15', () => {
-    // act & assert
-    assert.strictEqual(PROVISIONAL_FLOOD_WATER_LEVEL_CODE, 31);
+    // arrange
+    const expectedThreshold = 31;
+
+    // act
+    const floodThreshold = PROVISIONAL_FLOOD_WATER_LEVEL_CODE;
+
+    // assert
+    assert.strictEqual(floodThreshold, expectedThreshold);
   });
 });

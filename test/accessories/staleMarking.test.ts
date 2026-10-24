@@ -1,32 +1,50 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests the passes that stop a cached accessory from claiming a false normal state.
+ */
+
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import { createFakeHap } from '../../features/support/fakeHap.js';
-import { HarnessPlatformAccessory } from '../../features/support/fakeHomebridgeApi.js';
+import { asHapNamespace, asService, createFakeHap } from '../../features/lib/hap.js';
+import { asPlatformAccessory, HarnessPlatformAccessory } from '../../features/lib/homebridgeApi.js';
 import { createControlBinder } from '../../src/accessories/controls.js';
 import { markRestoredServicesStale, markTrustReportsUnreadable, refuseRestoredControls } from '../../src/accessories/staleMarking.js';
 
-import type { FakeCharacteristicClass, FakeHapService } from '../../features/support/fakeHap.js';
+import type { FakeCharacteristicClass, FakeHapService } from '../../features/lib/hap.js';
 import type { DeviceCapability } from '../../src/device/family.js';
 import type { Timers } from '../../src/runtime/timers.js';
-import type { API, Logging, PlatformAccessory, Service } from 'homebridge';
+import type { Logging } from 'homebridge';
 
 const ACCESSORY_UUID = 'placeholder-accessory-uuid';
 
-// The status a refused credential is presented under, written independently of the stand-in so a
-// drifted number fails here (D-10, 04-CONTEXT D-04).
-const COMMUNICATION_FAILURE = -70402;
+// The status the trust reports are marked under. It is not -70402, the status HAP and the stand-in
+// give an error that names no status, so a pass that marked with such an error instead of its status
+// argument would read differently (D-10).
+const RESOURCE_BUSY = -70403;
 
 // The status the missing command transport already answers, and the one a restored control answers
-// for the same condition. Written out here for the same reason as the one above (D-08).
+// for the same condition. Written out rather than read from the stand-in, because the refusal reads
+// the status from the injected namespace, so a drifted number there fails here (D-08).
 const NOT_ALLOWED_IN_CURRENT_STATE = -70412;
+
+// The cause the missing command transport names, and the one a restored refusal names for the same
+// condition. Written out here so a refusal with a different wording fails here (D-08).
+const NO_COMMAND_TRANSPORT_CAUSE = 'the plugin has no way to reach the vendor right now';
 
 const DEVICE_ID = 'account-1_serial-1';
 
-// The one hand-built stand-in of this boundary, widened where the pass takes
-// the namespace the plugin is injected with.
+// The one hand-built stand-in of this boundary. The namespace holds no per-case state: each case
+// builds its own accessory, and a characteristic lives on the service that carries it.
 const HAP = createFakeHap();
-const HAP_NAMESPACE = HAP as unknown as API['hap'];
+
+// The namespace stand-in, widened where the passes and the binder take the injected HAP namespace.
+const HAP_NAMESPACE = asHapNamespace(HAP);
 
 // A restored accessory carries plain services holding the values the previous
 // run published, which is what `restoreCachedAccessories` rebuilds and what a
@@ -74,18 +92,70 @@ function selfTestControl(accessory: HarnessPlatformAccessory): FakeHapService {
 }
 
 function silentLog(): Logging {
-  const noop = (): void => {
+  function noop(): void {
     // logging is not this module's job; the stub discards every call
-  };
+  }
 
   return Object.assign(noop, { prefix: 'basement guardian', debug: noop, error: noop, info: noop, log: noop, success: noop, warn: noop });
 }
 
-// Deferred execution that records nothing and runs nothing. The clearing push a refusal arms is the
-// control module's behaviour and is driven in that module's own cases; here the port only has to be
-// something the pass can hand on.
+// A log stand-in that collects the warnings a case reads back and discards every other level.
+function warningLog(warnings: string[]): Logging {
+  function noop(): void {
+    // only the warning channel is read back
+  }
+
+  return Object.assign(noop, {
+    prefix: 'basement guardian',
+    debug: noop,
+    error: noop,
+    info: noop,
+    log: noop,
+    success: noop,
+    warn: (message: string) => {
+      warnings.push(message);
+    },
+  });
+}
+
+// Deferred execution that records nothing and runs nothing, for the cases that do not observe the
+// clearing push a refusal arms; there the port only has to be something the pass can hand on.
 function heldTimers(): Timers {
-  return { setTimeout: () => undefined, setInterval: () => undefined, clearTimeout: () => undefined, clearInterval: () => undefined };
+  return {
+    setTimeout: () => undefined,
+    setInterval: () => undefined,
+    clearTimeout: () => {
+      // nothing was armed, so there is nothing to cancel
+    },
+    clearInterval: () => {
+      // nothing was armed, so there is nothing to cancel
+    },
+  };
+}
+
+/** One deferral the pass asked the injected port for. */
+interface Deferral {
+  delayMs: number;
+  run: () => void;
+}
+
+// Deferred execution that records each deferral rather than arming one, so a case reads back the
+// delay asked for and runs the handler itself.
+function recordingTimers(deferrals: Deferral[]): Timers {
+  return {
+    setTimeout: (run: () => void, delayMs: number) => {
+      deferrals.push({ delayMs, run });
+
+      return deferrals.length;
+    },
+    setInterval: () => undefined,
+    clearTimeout: () => {
+      // the pass arms one deferral and cancels none
+    },
+    clearInterval: () => {
+      // the pass arms no interval, so there is nothing to cancel
+    },
+  };
 }
 
 // What a controller's press answered: the status a refusal threw, or `undefined` for a write HAP
@@ -93,10 +163,6 @@ function heldTimers(): Timers {
 // whole of what the restored-control pass changes.
 async function pressOutcomeOf(service: FakeHapService): Promise<unknown> {
   const on = service.getCharacteristic(HAP.Characteristic.On);
-
-  if (on === undefined) {
-    throw new Error('the restored control carries no On characteristic');
-  }
 
   try {
     await on.handleSetRequest(true);
@@ -108,34 +174,87 @@ async function pressOutcomeOf(service: FakeHapService): Promise<unknown> {
 }
 
 function markStale(accessory: HarnessPlatformAccessory): number {
-  return markRestoredServicesStale(accessory as unknown as PlatformAccessory, HAP_NAMESPACE);
+  return markRestoredServicesStale(asPlatformAccessory(accessory), HAP_NAMESPACE).reached;
 }
 
 function markUnreadable(accessory: HarnessPlatformAccessory): number {
-  return markTrustReportsUnreadable(accessory as unknown as PlatformAccessory, HAP_NAMESPACE, COMMUNICATION_FAILURE);
+  return markTrustReportsUnreadable(asPlatformAccessory(accessory), HAP_NAMESPACE, RESOURCE_BUSY).reached;
 }
 
 function refuseControls(accessory: HarnessPlatformAccessory): number {
-  return refuseRestoredControls(accessory as unknown as PlatformAccessory, HAP_NAMESPACE, silentLog(), heldTimers());
+  return refuseControlsWith(accessory, silentLog(), heldTimers());
+}
+
+function refuseControlsWith(accessory: HarnessPlatformAccessory, log: Logging, timers: Timers): number {
+  return refuseRestoredControls(asPlatformAccessory(accessory), HAP_NAMESPACE, log, timers).reached;
 }
 
 // What a characteristic holds, and what a controller read of it answers. The read is the whole
 // difference between unreadable and merely marked, so it is driven rather than inferred from the
+// stored status. The read is awaited because real HAP answers it asynchronously and rejects with the
 // stored status.
-function readOf(service: FakeHapService, characteristicClass: FakeCharacteristicClass): { value: unknown; threw: unknown } {
+async function readOf(service: FakeHapService, characteristicClass: FakeCharacteristicClass): Promise<{ value: unknown; threw: unknown }> {
   const held = service.getCharacteristic(characteristicClass);
   let threw: unknown = undefined;
 
   try {
-    held?.handleGetRequest();
+    await held.handleGetRequest();
   } catch (error: unknown) {
     threw = error;
   }
 
-  return { value: held?.value, threw };
+  return { value: held.value, threw };
 }
 
 describe('markRestoredServicesStale', () => {
+  test('counts a later stale mark after the first restored service rejects its update', (t) => {
+    // arrange
+    const accessory = restoredAccessory();
+    const flood = floodSensorReporting(accessory, true);
+    const battery = batteryReporting(accessory, true);
+    t.mock.method(flood, 'updateCharacteristic', () => {
+      throw new Error('synthetic restored marking failure');
+    });
+
+    // act
+    const passCounts = markRestoredServicesStale(asPlatformAccessory(accessory), HAP_NAMESPACE);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        passCounts,
+        flood: flood.getCharacteristic(HAP.Characteristic.StatusActive).value,
+        battery: battery.getCharacteristic(HAP.Characteristic.StatusActive).value,
+        leakDetected: flood.getCharacteristic(HAP.Characteristic.LeakDetected).value,
+        batteryLevel: battery.getCharacteristic(HAP.Characteristic.BatteryLevel).value,
+      },
+      { passCounts: { reached: 1, failed: 1 }, flood: true, battery: false, leakDetected: 1, batteryLevel: 80 },
+    );
+  });
+
+  test('makes the trust report unreadable on a restored service whose stale mark is rejected, and keeps its value', async (t) => {
+    // arrange
+    const accessory = restoredAccessory();
+    const flood = floodSensorReporting(accessory, true);
+    const updateCharacteristicSpy = t.mock.method(flood, 'updateCharacteristic');
+    updateCharacteristicSpy.mock.mockImplementationOnce(() => {
+      throw new Error('synthetic restored marking failure');
+    });
+
+    // act
+    const marking = markRestoredServicesStale(asPlatformAccessory(accessory), HAP_NAMESPACE);
+
+    // assert
+    assert.deepStrictEqual(
+      { marking, flood: await readOf(flood, HAP.Characteristic.StatusActive), leakDetected: await readOf(flood, HAP.Characteristic.LeakDetected) },
+      {
+        marking: { reached: 0, failed: 1 },
+        flood: { value: true, threw: HAP.HAPStatus.SERVICE_COMMUNICATION_FAILURE },
+        leakDetected: { value: HAP.Characteristic.LeakDetected.LEAK_DETECTED, threw: undefined },
+      },
+    );
+  });
+
   test('counts every restored service that already reports whether the plugin vouches for it', () => {
     // arrange
     const accessory = restoredAccessory();
@@ -162,8 +281,8 @@ describe('markRestoredServicesStale', () => {
     // assert
     assert.deepStrictEqual(
       {
-        flood: flood.getCharacteristic(HAP.Characteristic.StatusActive)?.value,
-        battery: battery.getCharacteristic(HAP.Characteristic.StatusActive)?.value,
+        flood: flood.getCharacteristic(HAP.Characteristic.StatusActive).value,
+        battery: battery.getCharacteristic(HAP.Characteristic.StatusActive).value,
       },
       { flood: false, battery: false },
     );
@@ -179,7 +298,7 @@ describe('markRestoredServicesStale', () => {
 
     // assert
     assert.deepStrictEqual(
-      { marked, carriesTrust: control.testCharacteristic(HAP.Characteristic.StatusActive), on: control.getCharacteristic(HAP.Characteristic.On)?.value },
+      { marked, carriesTrust: control.testCharacteristic(HAP.Characteristic.StatusActive), on: control.getCharacteristic(HAP.Characteristic.On).value },
       { marked: 0, carriesTrust: false, on: true },
     );
   });
@@ -196,8 +315,8 @@ describe('markRestoredServicesStale', () => {
     // assert
     assert.deepStrictEqual(
       {
-        leakDetected: flood.getCharacteristic(HAP.Characteristic.LeakDetected)?.value,
-        batteryLevel: battery.getCharacteristic(HAP.Characteristic.BatteryLevel)?.value,
+        leakDetected: flood.getCharacteristic(HAP.Characteristic.LeakDetected).value,
+        batteryLevel: battery.getCharacteristic(HAP.Characteristic.BatteryLevel).value,
       },
       { leakDetected: HAP.Characteristic.LeakDetected.LEAK_DETECTED, batteryLevel: 80 },
     );
@@ -212,7 +331,7 @@ describe('markRestoredServicesStale', () => {
     const marked = markStale(accessory);
 
     // assert
-    assert.deepStrictEqual({ marked, statusActive: flood.getCharacteristic(HAP.Characteristic.StatusActive)?.value }, { marked: 1, statusActive: false });
+    assert.deepStrictEqual({ marked, statusActive: flood.getCharacteristic(HAP.Characteristic.StatusActive).value }, { marked: 1, statusActive: false });
   });
 
   test('marks nothing on an accessory the cache restored with no services at all', () => {
@@ -245,7 +364,38 @@ describe('markRestoredServicesStale', () => {
 });
 
 describe('markTrustReportsUnreadable', () => {
-  test('counts every service that reports whether the plugin vouches for it, and leaves one that never did alone', () => {
+  test('counts a later successful mark after the first service fails on the same accessory', async (t) => {
+    // arrange
+    const accessory = restoredAccessory();
+    const flood = floodSensorReporting(accessory, true);
+    const battery = batteryReporting(accessory, true);
+    t.mock.method(flood, 'updateCharacteristic', () => {
+      throw new Error('synthetic trust marking failure');
+    });
+
+    // act
+    const marks = markTrustReportsUnreadable(asPlatformAccessory(accessory), HAP_NAMESPACE, RESOURCE_BUSY);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        marks,
+        flood: await readOf(flood, HAP.Characteristic.StatusActive),
+        battery: await readOf(battery, HAP.Characteristic.StatusActive),
+        leakDetected: await readOf(flood, HAP.Characteristic.LeakDetected),
+        batteryLevel: await readOf(battery, HAP.Characteristic.BatteryLevel),
+      },
+      {
+        marks: { reached: 1, failed: 1 },
+        flood: { value: true, threw: undefined },
+        battery: { value: true, threw: RESOURCE_BUSY },
+        leakDetected: { value: HAP.Characteristic.LeakDetected.LEAK_DETECTED, threw: undefined },
+        batteryLevel: { value: 80, threw: undefined },
+      },
+    );
+  });
+
+  test('counts every service that reports whether the plugin vouches for it, and leaves one that never did alone', async () => {
     // arrange
     const accessory = restoredAccessory();
     floodSensorReporting(accessory, true);
@@ -257,7 +407,7 @@ describe('markTrustReportsUnreadable', () => {
 
     // assert
     assert.deepStrictEqual(
-      { marked, carriesTrust: control.testCharacteristic(HAP.Characteristic.StatusActive), on: readOf(control, HAP.Characteristic.On) },
+      { marked, carriesTrust: control.testCharacteristic(HAP.Characteristic.StatusActive), on: await readOf(control, HAP.Characteristic.On) },
       { marked: 2, carriesTrust: false, on: { value: true, threw: undefined } },
     );
   });
@@ -265,7 +415,7 @@ describe('markTrustReportsUnreadable', () => {
   // The whole content of the presentation: a controller read answers the status rather than a
   // value, and the value the previous run published is still underneath it. A pass that erased the
   // reading would satisfy the first half of this and fail the second (RES-04, D-10, D-014).
-  test('makes a read of every marked service throw the status it was given, and leaves the value it held', () => {
+  test('makes a read of every marked service throw the status it was given, and leaves the value it held', async () => {
     // arrange
     const accessory = restoredAccessory();
     const flood = floodSensorReporting(accessory, true);
@@ -277,17 +427,17 @@ describe('markTrustReportsUnreadable', () => {
     // assert
     assert.deepStrictEqual(
       {
-        flood: readOf(flood, HAP.Characteristic.StatusActive),
-        battery: readOf(battery, HAP.Characteristic.StatusActive),
+        flood: await readOf(flood, HAP.Characteristic.StatusActive),
+        battery: await readOf(battery, HAP.Characteristic.StatusActive),
       },
       {
-        flood: { value: true, threw: COMMUNICATION_FAILURE },
-        battery: { value: true, threw: COMMUNICATION_FAILURE },
+        flood: { value: true, threw: RESOURCE_BUSY },
+        battery: { value: true, threw: RESOURCE_BUSY },
       },
     );
   });
 
-  test('retains every other reading on a service it marks, so the tile keeps its last values', () => {
+  test('retains every other reading on a service it marks, so the tile keeps its last values', async () => {
     // arrange
     const accessory = restoredAccessory();
     const flood = floodSensorReporting(accessory, true);
@@ -299,8 +449,8 @@ describe('markTrustReportsUnreadable', () => {
     // assert
     assert.deepStrictEqual(
       {
-        leakDetected: readOf(flood, HAP.Characteristic.LeakDetected),
-        batteryLevel: readOf(battery, HAP.Characteristic.BatteryLevel),
+        leakDetected: await readOf(flood, HAP.Characteristic.LeakDetected),
+        batteryLevel: await readOf(battery, HAP.Characteristic.BatteryLevel),
       },
       {
         leakDetected: { value: HAP.Characteristic.LeakDetected.LEAK_DETECTED, threw: undefined },
@@ -338,18 +488,84 @@ describe('markTrustReportsUnreadable', () => {
 });
 
 describe('refuseRestoredControls', () => {
+  test('arms a later restored control when the first rejects its refusal handler', async (t) => {
+    // arrange
+    const accessory = restoredAccessory();
+    const first = switchCarryingNoTrust(accessory);
+    const later = selfTestControl(accessory);
+    const firstOn = first.getCharacteristic(HAP.Characteristic.On);
+    assert.ok(firstOn);
+    t.mock.method(firstOn, 'onSet', () => {
+      throw new Error('synthetic restored binding failure');
+    });
+
+    // act
+    const passCounts = refuseRestoredControls(asPlatformAccessory(accessory), HAP_NAMESPACE, silentLog(), heldTimers());
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        passCounts,
+        laterPress: await pressOutcomeOf(later),
+        laterOn: later.getCharacteristic(HAP.Characteristic.On).value,
+      },
+      { passCounts: { reached: 1, failed: 1 }, laterPress: NOT_ALLOWED_IN_CURRENT_STATE, laterOn: false },
+    );
+  });
+
+  // A restored accessory carries both control Switches, so a pass that armed only the first Switch it
+  // found would leave the second one storing a press and reporting success.
   test('refuses a press on every restored control and counts the controls it armed', async () => {
     // arrange
     const accessory = restoredAccessory();
     floodSensorReporting(accessory, true);
     batteryReporting(accessory, true);
-    const control = switchCarryingNoTrust(accessory);
+    const alarmMute = switchCarryingNoTrust(accessory);
+    const selfTest = selfTestControl(accessory);
 
     // act
     const armed = refuseControls(accessory);
 
     // assert
-    assert.deepStrictEqual({ armed, press: await pressOutcomeOf(control) }, { armed: 1, press: NOT_ALLOWED_IN_CURRENT_STATE });
+    assert.deepStrictEqual(
+      { armed, alarmMute: await pressOutcomeOf(alarmMute), selfTest: await pressOutcomeOf(selfTest) },
+      { armed: 2, alarmMute: NOT_ALLOWED_IN_CURRENT_STATE, selfTest: NOT_ALLOWED_IN_CURRENT_STATE },
+    );
+  });
+
+  // The refusal is the control module's own: the transport rule's status and cause, and a clearing
+  // push. Without the push the refused Switch answers its status to every later read, which Apple
+  // Home draws as "No Response", the presentation kept for a refused credential (D-07, D-08, D-10).
+  test('refuses a restored press with the transport status and cause, and clears the status once the push runs', async () => {
+    // arrange
+    const accessory = restoredAccessory();
+    const control = switchCarryingNoTrust(accessory);
+    const warnings: string[] = [];
+    const deferrals: Deferral[] = [];
+
+    // act
+    const armed = refuseControlsWith(accessory, warningLog(warnings), recordingTimers(deferrals));
+    const press = await pressOutcomeOf(control);
+    const readBeforePush = await readOf(control, HAP.Characteristic.On);
+
+    for (const deferral of deferrals) {
+      deferral.run();
+    }
+
+    const readAfterPush = await readOf(control, HAP.Characteristic.On);
+
+    // assert
+    assert.deepStrictEqual(
+      { armed, press, warnings, delays: deferrals.map((deferral) => deferral.delayMs), readBeforePush, readAfterPush },
+      {
+        armed: 1,
+        press: NOT_ALLOWED_IN_CURRENT_STATE,
+        warnings: [`Refused Alarm Mute on Sump Guardian: ${NO_COMMAND_TRANSPORT_CAUSE}.`],
+        delays: [0],
+        readBeforePush: { value: true, threw: NOT_ALLOWED_IN_CURRENT_STATE },
+        readAfterPush: { value: true, threw: undefined },
+      },
+    );
   });
 
   // The guard is the control write surface itself, so a sensor is walked and left exactly as the
@@ -388,7 +604,7 @@ describe('refuseRestoredControls', () => {
 
   // A write handler and nothing else. `RES-04` asks that a read answers from memory, so the pass
   // must leave every control it arms answering one (D-09).
-  test('leaves every control it arms answering a read', () => {
+  test('leaves every control it arms answering a read', async () => {
     // arrange
     const accessory = restoredAccessory();
     const control = switchCarryingNoTrust(accessory);
@@ -397,7 +613,7 @@ describe('refuseRestoredControls', () => {
     const armed = refuseControls(accessory);
 
     // assert
-    assert.deepStrictEqual({ armed, on: readOf(control, HAP.Characteristic.On) }, { armed: 1, on: { value: true, threw: undefined } });
+    assert.deepStrictEqual({ armed, on: await readOf(control, HAP.Characteristic.On) }, { armed: 1, on: { value: true, threw: undefined } });
   });
 
   // A set handler is one slot in HAP rather than a listener list, so the accessory's own binder
@@ -424,11 +640,13 @@ describe('refuseRestoredControls', () => {
       offlineConfirmed: () => false,
       commandTransportReady: () => true,
       liveConfirmationObservable: () => true,
-      republish: () => undefined,
+      republish: () => {
+        // this case reads back what was sent, not the rows a republish re-asserts
+      },
     });
 
     // act
-    binder.bind(control as unknown as Service, 'self-test', () => false);
+    binder.bind(asService(control), 'self-test', () => false);
     const press = await pressOutcomeOf(control);
 
     // assert

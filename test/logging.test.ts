@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests credential redaction across Homebridge logger routes.
+ */
+
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
@@ -74,6 +84,21 @@ test('D-18 substitutes a registered secret through the bare callable form', () =
   verify(delegate);
 });
 
+test('D-18 redacts a registered secret in a callable trailing parameter', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate('the grant was rejected', `attempt with ${REDACTED}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [ACCOUNT_PASSWORD] });
+
+  // act
+  log('the grant was rejected', `attempt with ${ACCOUNT_PASSWORD}`);
+
+  // assert
+  verify(delegate);
+});
+
 for (const member of LEVELLED_MEMBERS) {
   test(`D-18 substitutes a registered secret through ${member}`, () => {
     // arrange
@@ -101,6 +126,21 @@ test('D-18 substitutes a registered secret through the levelled log member', () 
 
   // act
   log.log(LogLevel.WARN, `signing in with ${ACCOUNT_PASSWORD}`);
+
+  // assert
+  verify(delegate);
+});
+
+test('D-18 redacts a registered secret in a levelled log trailing parameter', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.log(LogLevel.WARN, 'the grant was rejected', `attempt with ${REDACTED}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [ACCOUNT_PASSWORD] });
+
+  // act
+  log.log(LogLevel.WARN, 'the grant was rejected', `attempt with ${ACCOUNT_PASSWORD}`);
 
   // assert
   verify(delegate);
@@ -136,6 +176,22 @@ test('substitutes a registered secret inside a plain object parameter', () => {
   verify(delegate);
 });
 
+test('redacts a registered secret escaped by object serialization', () => {
+  // arrange
+  const secret = 'my"pass';
+  const delegate = createDelegate();
+  when(() => {
+    delegate.info('the grant was rejected', `{"credential":"${REDACTED}"}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [secret] });
+
+  // act
+  log.info('the grant was rejected', { credential: secret });
+
+  // assert
+  verify(delegate);
+});
+
 test('substitutes a registered secret inside an Error parameter and keeps its class name', () => {
   // arrange
   const delegate = createDelegate();
@@ -146,6 +202,38 @@ test('substitutes a registered secret inside an Error parameter and keeps its cl
 
   // act
   log.error('the grant was rejected', new TypeError(`rejected ${ACCOUNT_PASSWORD}`));
+
+  // assert
+  verify(delegate);
+});
+
+test('redacts a serialized registered secret inside an Error parameter', () => {
+  // arrange
+  const secret = 'my"pass';
+  const delegate = createDelegate();
+  when(() => {
+    delegate.error('the grant was rejected', `TypeError: rejected {"credential":"${REDACTED}"}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [secret] });
+
+  // act
+  log.error('the grant was rejected', new TypeError(`rejected ${JSON.stringify({ credential: secret })}`));
+
+  // assert
+  verify(delegate);
+});
+
+test('redacts a registered secret in an Error class name', () => {
+  // arrange
+  class CredentialValue extends Error {}
+  const delegate = createDelegate();
+  when(() => {
+    delegate.error('the grant was rejected', `${REDACTED}: failure`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: ['CredentialValue'] });
+
+  // act
+  log.error('the grant was rejected', new CredentialValue('failure'));
 
   // assert
   verify(delegate);
@@ -165,6 +253,28 @@ test('describes a parameter that cannot be serialized', () => {
   log.warn('the snapshot was refused', snapshot);
 
   // assert
+  verify(delegate);
+});
+
+test('describes an object whose toJSON returns undefined without throwing', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.warn('the snapshot was refused', '[unserializable object]');
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [] });
+  const snapshot = { toJSON: () => undefined };
+
+  // act
+  let loggingError: string | undefined;
+  try {
+    log.warn('the snapshot was refused', snapshot);
+  } catch (error: unknown) {
+    loggingError = error instanceof Error ? error.message : 'non-Error throw';
+  }
+
+  // assert
+  assert.strictEqual(loggingError, undefined);
   verify(delegate);
 });
 
@@ -211,6 +321,21 @@ test('AUTH-02 leaves the sentence full stop after an authorization token it subs
 
   // act
   log.debug('the request carried Bearer header.payload.signature.');
+
+  // assert
+  verify(delegate);
+});
+
+test('AUTH-02 redacts a lowercase bearer token with a tilde', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.debug(`sending authorization: bearer ${REDACTED}.`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [] });
+
+  // act
+  log.debug('sending authorization: bearer header~payload.signature.');
 
   // assert
   verify(delegate);
@@ -291,6 +416,118 @@ test('AUTH-02 substitutes an authentication request body whose password was neve
   verify(delegate);
 });
 
+test('AUTH-02 redacts a comma inside a quoted password', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.debug(`posting {"password":"${REDACTED}"}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [] });
+
+  // act
+  log.debug('posting {"password":"left,right"}');
+
+  // assert
+  verify(delegate);
+});
+
+test('AUTH-02 redacts a comma inside an unquoted password', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.debug(`posting password=${REDACTED}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [] });
+
+  // act
+  log.debug('posting password=left,right');
+
+  // assert
+  verify(delegate);
+});
+
+test('AUTH-02 redacts a possible following field after an unquoted password', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.debug(`posting password=${REDACTED}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [] });
+
+  // act
+  log.debug('posting password=left,right, status=ok');
+
+  // assert
+  verify(delegate);
+});
+
+test('AUTH-02 redacts a field-shaped suffix inside an unquoted password', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.debug(`posting password=${REDACTED}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [] });
+
+  // act
+  log.debug('posting password=left,right=middle');
+
+  // assert
+  verify(delegate);
+});
+
+for (const { character, password } of [
+  { character: 'brace', password: 'left}right' },
+  { character: 'quote', password: 'left"right' },
+  { character: 'newline', password: 'left\nright' },
+]) {
+  test(`AUTH-02 redacts a ${character} inside an unquoted password`, () => {
+    // arrange
+    const delegate = createDelegate();
+    when(() => {
+      delegate.debug(`posting password=${REDACTED}`);
+    }).thenReturn(undefined);
+    const log = createRedactingLogger({ delegate, secrets: [] });
+
+    // act
+    log.debug(`posting password=${password}`);
+
+    // assert
+    verify(delegate);
+  });
+}
+
+test('AUTH-02 redacts a new password when its field name is a registered secret', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.debug(`posting {"${REDACTED}":"${REDACTED}"}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: ['password'] });
+
+  // act
+  log.debug('posting {"password":"next-secret"}');
+
+  // assert
+  verify(delegate);
+});
+
+test('AUTH-02 redacts a registered secret containing a password field', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.info(`token ${REDACTED}`);
+  }).thenReturn(undefined);
+  const secret = 'prefix password=inner-secret';
+  const log = createRedactingLogger({ delegate, secrets: [secret] });
+
+  // act
+  log.info(`token ${secret}`);
+
+  // assert
+  verify(delegate);
+});
+
 // The same body written with spaces around its separators, which is what the
 // separator groups exist for: without them the pattern never reaches the value
 // and the whole body goes to the log unredacted.
@@ -320,6 +557,21 @@ test('substitutes a secret registered after the wrapper was built', () => {
   // act
   log.registerSecret(ID_TOKEN);
   log.info(`the token ${ID_TOKEN} expires soon`);
+
+  // assert
+  verify(delegate);
+});
+
+test('redacts the longest registered secret when secrets overlap', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.info(`token ${REDACTED}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: ['abc', 'abcdef'] });
+
+  // act
+  log.info('token abcdef');
 
   // assert
   verify(delegate);

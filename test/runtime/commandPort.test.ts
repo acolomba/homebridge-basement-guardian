@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Checks command port shapes through strict compiler contracts.
+ */
+
 import type { CommandFailure, CommandOutcome, CommandPort } from '../../src/runtime/commandPort.js';
 
 // A port is a contract, so the cases here are the shapes it admits and the ones
@@ -16,6 +26,12 @@ void ({ send: () => Promise.resolve({ accepted: true }) } satisfies CommandPort)
 void ({ accepted: false } satisfies CommandOutcome);
 // @ts-expect-error an acceptance carries no cause, so the two forms cannot be mixed
 void ({ accepted: true, failure: 'timed-out' } satisfies CommandOutcome);
+// @ts-expect-error an outcome states whether the vendor accepted the attempt
+void ({ failure: 'vendor-error' } satisfies CommandOutcome);
+// @ts-expect-error acceptance is a boolean discriminant
+void ({ accepted: 'true' } satisfies CommandOutcome);
+// @ts-expect-error a refusal carries a cause from the closed failure vocabulary
+void ({ accepted: false, failure: 'refused' } satisfies CommandOutcome);
 // @ts-expect-error the vocabulary is closed: a new cause is a deliberate addition
 void ('refused' satisfies CommandFailure);
 // @ts-expect-error a port answers an outcome rather than resolving silently

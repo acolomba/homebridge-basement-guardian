@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests registration of the Basement Guardian platform.
+ */
+
 import { test } from 'node:test';
 
 import { mock, verify, when } from 'strong-mock';

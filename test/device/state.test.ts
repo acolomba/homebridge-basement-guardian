@@ -1,17 +1,22 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests canonical device snapshots and state-store behavior.
+ */
+
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
 import { createDeviceStateStore } from '../../src/device/state.js';
 
+import { geminiDevice, geminiIdentity } from './stateSeeds.js';
+
 import type { ApiDevice } from '../../src/cloud/types.js';
-import type {
-  DeviceIdentity,
-  DeviceSnapshot,
-  DeviceSnapshotListener,
-  DeviceStateStore,
-  DeviceStateStoreOptions,
-  ReportedPatch,
-} from '../../src/device/state.js';
+import type { DeviceSnapshot, DeviceSnapshotListener, DeviceStateStore, DeviceStateStoreOptions, ReportedPatch } from '../../src/device/state.js';
 import type { Clock } from '../../src/runtime/clock.js';
 import type { LogLevel, Logging } from 'homebridge';
 
@@ -26,33 +31,16 @@ const SECOND_RECEIPT = 1_700_000_888_000;
 // counting calls.
 interface Notification {
   changedKeys: readonly string[];
-  waterLevel: unknown;
-  previousWaterLevel: unknown;
-}
-
-// The vendor deviceId reads <account-id>_<serial-number>; fixtures carry a
-// placeholder in place of the real account identifier.
-function geminiDevice(): ApiDevice {
-  return {
-    deviceId: DEVICE_ID,
-    deviceTypeId: 'wayneWaterGemini',
-    name: 'Sump System',
-    serialNumber: 'serial-1',
-    connectivity: { connected: true, timestamp: DEVICE_TIME },
-    data: { water_level: 1, primary_pump_running: false, ac_power: true },
-  };
-}
-
-function geminiIdentity(): DeviceIdentity {
-  return { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' };
+  next: DeviceSnapshot;
+  previous: DeviceSnapshot | undefined;
 }
 
 // Logging is a callable interface with seven members, so the stub is a function
 // that carries them rather than an object literal.
 function createRecordingLog(messages: string[]): Logging {
-  const record = (message: string): void => {
+  function record(message: string): void {
     messages.push(message);
-  };
+  }
 
   return Object.assign(record, {
     prefix: 'basement guardian',
@@ -77,7 +65,7 @@ function fixedStoreOptions(messages: string[] = []): DeviceStateStoreOptions {
 
 function recordInto(notifications: Notification[]): DeviceSnapshotListener {
   return (next, previous, changedKeys) => {
-    notifications.push({ changedKeys, waterLevel: next.data.water_level, previousWaterLevel: previous?.data.water_level });
+    notifications.push({ next, previous, changedKeys });
   };
 }
 
@@ -91,6 +79,22 @@ function versionedStore(): DeviceStateStore {
 
   return store;
 }
+
+void ({
+  data: { water_level: 1 },
+  state: undefined,
+  version: 6,
+  // @ts-expect-error requested control state is never canonical safety state, so the patch shape gives it nowhere to land
+  desired: { test_running: true },
+} satisfies ReportedPatch);
+
+void ({
+  data: undefined,
+  state: undefined,
+  version: 6,
+  // @ts-expect-error an acknowledgement is not a sensor reading, so a null requested value has nowhere to land either
+  desired: { test_running: null },
+} satisfies ReportedPatch);
 
 describe('applyDiscovery', () => {
   test('builds a snapshot that keeps device time apart from local receipt time', () => {
@@ -209,13 +213,13 @@ describe('applyDiscovery', () => {
 
   test('copies the vendor record, so a later change to it cannot reach stored state', () => {
     // arrange
-    const data: Record<string, unknown> = { water_level: 1 };
-    const device: ApiDevice = { ...geminiDevice(), data };
+    const vendorTelemetry: Record<string, unknown> = { water_level: 1 };
+    const device: ApiDevice = { ...geminiDevice(), data: vendorTelemetry };
     const store = createDeviceStateStore(fixedStoreOptions());
 
     // act
     const snapshot = store.applyDiscovery(device);
-    data.water_level = 31;
+    vendorTelemetry.water_level = 31;
 
     // assert
     assert.deepStrictEqual(snapshot.data, { water_level: 1 });
@@ -229,6 +233,15 @@ describe('applyDiscovery', () => {
     const snapshot: DeviceSnapshot = store.applyDiscovery(geminiDevice());
 
     // assert
+    assert.deepStrictEqual(snapshot, {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    });
     assert.strictEqual(Object.isFrozen(snapshot), true);
     assert.strictEqual(Object.isFrozen(snapshot.identity), true);
     assert.strictEqual(Object.isFrozen(snapshot.connectivity), true);
@@ -244,6 +257,16 @@ describe('applyDiscovery', () => {
     const snapshot = store.applyDiscovery({ ...geminiDevice(), data: { readings: { depth: 3 }, fault: null } });
 
     // assert
+    assert.deepStrictEqual(snapshot, {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { readings: { depth: 3 }, fault: null },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    });
+    assert.deepStrictEqual(snapshot.data.readings, { depth: 3 });
     assert.strictEqual(Object.isFrozen(snapshot.data.readings), true);
   });
 });
@@ -288,28 +311,6 @@ describe('applyReportedPatch', () => {
     assert.deepStrictEqual(snapshot.metadata, { wifi_signal_dbm: -54 });
   });
 
-  test('carries no member able to hold a requested control value', () => {
-    // act & assert
-    void ({
-      data: { water_level: 1 },
-      state: undefined,
-      version: 6,
-      // @ts-expect-error requested control state is never canonical safety state, so the patch shape gives it nowhere to land
-      desired: { test_running: true },
-    } satisfies ReportedPatch);
-  });
-
-  test('carries no member able to hold an acknowledged control value', () => {
-    // act & assert
-    void ({
-      data: undefined,
-      state: undefined,
-      version: 6,
-      // @ts-expect-error an acknowledgement is not a sensor reading, so a null requested value has nowhere to land either
-      desired: { test_running: null },
-    } satisfies ReportedPatch);
-  });
-
   for (const { version, waterLevel, applied } of [
     { version: 4, waterLevel: 1, applied: 5 },
     { version: 5, waterLevel: 1, applied: 5 },
@@ -323,34 +324,70 @@ describe('applyReportedPatch', () => {
       const snapshot = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 31 }, state: undefined, version });
 
       // assert
-      assert.strictEqual(snapshot?.data.water_level, waterLevel);
+      assert.deepStrictEqual(snapshot, {
+        identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+        connectivity: { connected: true, timestamp: DEVICE_TIME },
+        data: { water_level: waterLevel, primary_pump_running: false, ac_power: true },
+        metadata: {},
+        shadowVersion: applied,
+        deviceTimestamp: DEVICE_TIME,
+        receivedAt: FIRST_RECEIPT,
+      });
+      assert.strictEqual(snapshot.data.water_level, waterLevel);
       assert.strictEqual(snapshot.shadowVersion, applied);
+      assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
+        identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+        connectivity: { connected: true, timestamp: DEVICE_TIME },
+        data: { water_level: waterLevel, primary_pump_running: false, ac_power: true },
+        metadata: {},
+        shadowVersion: applied,
+        deviceTimestamp: DEVICE_TIME,
+        receivedAt: FIRST_RECEIPT,
+      });
     });
   }
 
   test('applies an unversioned patch and leaves the applied version where the last versioned patch set it', () => {
     // arrange
     const store = versionedStore();
+    const expectedSnapshot: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 3, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: 5,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    };
 
     // act
     const snapshot = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 3 }, state: undefined, version: undefined });
 
     // assert
-    assert.strictEqual(snapshot?.data.water_level, 3);
-    assert.strictEqual(snapshot.shadowVersion, 5);
+    assert.deepStrictEqual(snapshot, expectedSnapshot);
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), expectedSnapshot);
   });
 
   test('applies the first versioned patch to a device the shadow has not yet versioned', () => {
     // arrange
     const store = createDeviceStateStore(fixedStoreOptions());
     store.applyDiscovery(geminiDevice());
+    const expectedSnapshot: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 3, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: 2,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    };
 
     // act
     const snapshot = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 3 }, state: undefined, version: 2 });
 
     // assert
-    assert.strictEqual(snapshot?.data.water_level, 3);
-    assert.strictEqual(snapshot.shadowVersion, 2);
+    assert.deepStrictEqual(snapshot, expectedSnapshot);
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), expectedSnapshot);
   });
 
   test('leaves the receipt time alone and establishes no watermark for a patch that reports neither section', () => {
@@ -374,6 +411,32 @@ describe('applyReportedPatch', () => {
       deviceTimestamp: DEVICE_TIME,
       receivedAt: FIRST_RECEIPT,
     });
+  });
+
+  test('leaves empty reported telemetry unobserved so a later poll replaces it', () => {
+    // arrange
+    let currentTime = FIRST_RECEIPT;
+    const clock: Clock = { now: () => currentTime };
+    const store = createDeviceStateStore(storeOptions(clock));
+    store.applyDiscovery(geminiDevice());
+
+    // act
+    currentTime = SECOND_RECEIPT;
+    const emptyPatch = store.applyReportedPatch(DEVICE_ID, { data: {}, state: undefined, version: 42 });
+    currentTime += 1;
+    const laterPoll = store.applyDiscovery({ ...geminiDevice(), data: { water_level: 9 } });
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        emptyPatch: { data: emptyPatch?.data, shadowVersion: emptyPatch?.shadowVersion, receivedAt: emptyPatch?.receivedAt },
+        laterPoll: { data: laterPoll.data, shadowVersion: laterPoll.shadowVersion, receivedAt: laterPoll.receivedAt },
+      },
+      {
+        emptyPatch: { data: { water_level: 1, primary_pump_running: false, ac_power: true }, shadowVersion: undefined, receivedAt: FIRST_RECEIPT },
+        laterPoll: { data: { water_level: 9 }, shadowVersion: undefined, receivedAt: SECOND_RECEIPT + 1 },
+      },
+    );
   });
 
   test('leaves the receipt time alone and advances the watermark it already held for a patch that reports neither section', () => {
@@ -415,9 +478,8 @@ describe('applyReportedPatch', () => {
     assert.strictEqual(snapshot?.receivedAt, SECOND_RECEIPT);
   });
 
-  // The two questions a reported document answers are pinned together here,
-  // because conflating them is what the wider guard did. A report of device
-  // metadata observed the device, so it moves the receipt time; it delivered no
+  // A report of device metadata observed the device, so it moves the receipt
+  // time; it delivered no
   // reading, so it establishes no watermark and the poll keeps the telemetry.
   // Narrowing either question alone fails this case (CR-03, SYNC-02, D-014).
   test('advances the receipt time and establishes no watermark for a patch that reports only device metadata', () => {
@@ -451,12 +513,23 @@ describe('applyReportedPatch', () => {
     // arrange
     const store = versionedStore();
     store.applyReportedPatch(DEVICE_ID, { data: undefined, state: { wifi_signal_dbm: -54 }, version: 8 });
+    const expectedSnapshot: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: { wifi_signal_dbm: -54 },
+      shadowVersion: 8,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    };
 
     // act
     const snapshot = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 31 }, state: undefined, version: 7 });
 
     // assert
-    assert.deepStrictEqual({ waterLevel: snapshot?.data.water_level, shadowVersion: snapshot?.shadowVersion }, { waterLevel: 1, shadowVersion: 8 });
+    assert.deepStrictEqual(snapshot, expectedSnapshot);
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), expectedSnapshot);
+    assert.deepStrictEqual({ waterLevel: snapshot.data.water_level, shadowVersion: snapshot.shadowVersion }, { waterLevel: 1, shadowVersion: 8 });
   });
 
   test('reports nothing and stores nothing for a device REST discovery has never returned', () => {
@@ -480,7 +553,17 @@ describe('applyReportedPatch', () => {
     const snapshot = store.applyReportedPatch(DEVICE_ID, { data: undefined, state: { radio: { signal: -54 } }, version: 1 });
 
     // assert
-    assert.strictEqual(Object.isFrozen(snapshot?.metadata.radio), true);
+    assert.deepStrictEqual(snapshot, {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: { radio: { signal: -54 } },
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    });
+    assert.deepStrictEqual(snapshot.metadata.radio, { signal: -54 });
+    assert.strictEqual(Object.isFrozen(snapshot.metadata.radio), true);
   });
 
   test('returns a merged snapshot no consumer can modify', () => {
@@ -492,13 +575,170 @@ describe('applyReportedPatch', () => {
     const snapshot = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 7 }, state: { wifi_signal_dbm: -54 }, version: 1 });
 
     // assert
+    assert.deepStrictEqual(snapshot, {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 7, primary_pump_running: false, ac_power: true },
+      metadata: { wifi_signal_dbm: -54 },
+      shadowVersion: 1,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    });
     assert.strictEqual(Object.isFrozen(snapshot), true);
-    assert.strictEqual(Object.isFrozen(snapshot?.data), true);
-    assert.strictEqual(Object.isFrozen(snapshot?.metadata), true);
+    assert.strictEqual(Object.isFrozen(snapshot.data), true);
+    assert.strictEqual(Object.isFrozen(snapshot.metadata), true);
   });
 });
 
 describe('releaseShadowSource', () => {
+  test('keeps a silent device flood through duplicate, older, and unversioned telemetry while its neighbour stays live', () => {
+    // arrange
+    let currentTime = FIRST_RECEIPT;
+    const store = createDeviceStateStore(storeOptions({ now: () => currentTime }));
+    store.applyDiscovery(geminiDevice());
+    store.applyDiscovery({ ...geminiDevice(), deviceId: SECOND_DEVICE_ID, serialNumber: 'serial-2' });
+    store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 7 });
+    store.applyReportedPatch(SECOND_DEVICE_ID, { data: { water_level: 4 }, state: undefined, version: 9 });
+    store.releaseShadowSource(DEVICE_ID, 'silence');
+    currentTime = SECOND_RECEIPT;
+    store.applyDiscovery({ ...geminiDevice(), data: { ...geminiDevice().data, water_level: 31 } });
+    store.releaseShadowSource(DEVICE_ID, 'silence');
+    const flood = store.snapshot(DEVICE_ID);
+
+    // act
+    const duplicate = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 7 });
+    const older = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 6 });
+    const unversioned = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: undefined });
+    store.applyDiscovery({ ...geminiDevice(), deviceId: SECOND_DEVICE_ID, serialNumber: 'serial-2' });
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        flood: store.snapshot(DEVICE_ID),
+        neighbour: store.snapshot(SECOND_DEVICE_ID),
+      },
+      {
+        flood,
+        neighbour: {
+          identity: { deviceId: SECOND_DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-2' },
+          connectivity: { connected: true, timestamp: DEVICE_TIME },
+          data: { water_level: 4, primary_pump_running: false, ac_power: true },
+          metadata: {},
+          shadowVersion: 9,
+          deviceTimestamp: DEVICE_TIME,
+          receivedAt: SECOND_RECEIPT,
+        },
+      },
+    );
+    assert.strictEqual(duplicate, flood);
+    assert.strictEqual(older, flood);
+    assert.strictEqual(unversioned, flood);
+  });
+
+  test('lets only a newer telemetry version take ownership after silence', () => {
+    // arrange
+    const store = versionedStore();
+    store.releaseShadowSource(DEVICE_ID, 'silence');
+    store.applyDiscovery({ ...geminiDevice(), data: { ...geminiDevice().data, water_level: 31 } });
+
+    // act
+    const snapshot = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 6 });
+
+    // assert
+    assert.deepStrictEqual(snapshot, {
+      identity: geminiIdentity(),
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 2, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: 6,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    });
+  });
+
+  test('keeps a newer metadata version fenced until later telemetry is newer still', () => {
+    // arrange
+    const store = versionedStore();
+    store.releaseShadowSource(DEVICE_ID, 'silence');
+    store.applyDiscovery({ ...geminiDevice(), data: { ...geminiDevice().data, water_level: 31 } });
+
+    // act
+    const metadata = store.applyReportedPatch(DEVICE_ID, { data: undefined, state: { firmware: 'v9' }, version: 6 });
+    const duplicate = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 6 });
+    const accepted = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 7 });
+
+    // assert
+    assert.deepStrictEqual(
+      { metadata, accepted },
+      {
+        metadata: {
+          identity: geminiIdentity(),
+          connectivity: { connected: true, timestamp: DEVICE_TIME },
+          data: { water_level: 31, primary_pump_running: false, ac_power: true },
+          metadata: { firmware: 'v9' },
+          shadowVersion: undefined,
+          deviceTimestamp: DEVICE_TIME,
+          receivedAt: FIRST_RECEIPT,
+        },
+        accepted: {
+          identity: geminiIdentity(),
+          connectivity: { connected: true, timestamp: DEVICE_TIME },
+          data: { water_level: 2, primary_pump_running: false, ac_power: true },
+          metadata: { firmware: 'v9' },
+          shadowVersion: 7,
+          deviceTimestamp: DEVICE_TIME,
+          receivedAt: FIRST_RECEIPT,
+        },
+      },
+    );
+    assert.strictEqual(duplicate, metadata);
+  });
+
+  test('requires a version after silence even when no earlier shadow version exists', () => {
+    // arrange
+    const store = createDeviceStateStore(fixedStoreOptions());
+    store.applyDiscovery(geminiDevice());
+    store.releaseShadowSource(DEVICE_ID, 'silence');
+    const flood = store.applyDiscovery({ ...geminiDevice(), data: { ...geminiDevice().data, water_level: 31 } });
+
+    // act
+    const unversioned = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: undefined });
+    const versioned = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 1 });
+
+    // assert
+    assert.strictEqual(unversioned, flood);
+    assert.deepStrictEqual(versioned, {
+      identity: geminiIdentity(),
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 2, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: 1,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    });
+  });
+
+  test('clears a silence fence on disconnect and on removal before rediscovery', () => {
+    // arrange
+    const store = versionedStore();
+    store.releaseShadowSource(DEVICE_ID, 'silence');
+    store.applyDiscovery({ ...geminiDevice(), data: { ...geminiDevice().data, water_level: 31 } });
+
+    // act
+    store.releaseShadowSource(DEVICE_ID, 'disconnect');
+    const reconnected = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 5 });
+    store.releaseShadowSource(DEVICE_ID, 'silence');
+    store.remove(DEVICE_ID);
+    store.applyDiscovery(geminiDevice());
+    const rediscovered = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 3 }, state: undefined, version: 5 });
+
+    // assert
+    assert.deepStrictEqual(
+      { reconnected: reconnected?.data.water_level, rediscovered: rediscovered?.data.water_level, version: rediscovered?.shadowVersion },
+      { reconnected: 2, rediscovered: 3, version: 5 },
+    );
+  });
+
   test('clears the watermark on each device it is given and leaves the rest of each snapshot alone', () => {
     // arrange
     const store = createDeviceStateStore(fixedStoreOptions());
@@ -508,8 +748,8 @@ describe('releaseShadowSource', () => {
     store.applyReportedPatch(SECOND_DEVICE_ID, { data: { water_level: 5 }, state: undefined, version: 91 });
 
     // act
-    store.releaseShadowSource(DEVICE_ID);
-    store.releaseShadowSource(SECOND_DEVICE_ID);
+    store.releaseShadowSource(DEVICE_ID, 'disconnect');
+    store.releaseShadowSource(SECOND_DEVICE_ID, 'disconnect');
 
     // assert
     assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
@@ -521,7 +761,15 @@ describe('releaseShadowSource', () => {
       deviceTimestamp: DEVICE_TIME,
       receivedAt: FIRST_RECEIPT,
     });
-    assert.strictEqual(store.snapshot(SECOND_DEVICE_ID)?.shadowVersion, undefined);
+    assert.deepStrictEqual(store.snapshot(SECOND_DEVICE_ID), {
+      identity: { deviceId: SECOND_DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-2' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 5, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    });
   });
 
   test('hands telemetry back to the poll', () => {
@@ -530,7 +778,7 @@ describe('releaseShadowSource', () => {
     store.applyReportedPatch(DEVICE_ID, { data: { primary_pump_running: true }, state: undefined, version: 90 });
 
     // act
-    store.releaseShadowSource(DEVICE_ID);
+    store.releaseShadowSource(DEVICE_ID, 'disconnect');
     const snapshot = store.applyDiscovery(geminiDevice());
 
     // assert
@@ -541,7 +789,7 @@ describe('releaseShadowSource', () => {
     // arrange
     const store = versionedStore();
     store.applyReportedPatch(DEVICE_ID, { data: { primary_pump_running: true }, state: undefined, version: 90 });
-    store.releaseShadowSource(DEVICE_ID);
+    store.releaseShadowSource(DEVICE_ID, 'disconnect');
     store.applyDiscovery(geminiDevice());
 
     // act
@@ -558,7 +806,7 @@ describe('releaseShadowSource', () => {
     store.subscribe(DEVICE_ID, recordInto(notifications));
 
     // act
-    store.releaseShadowSource(DEVICE_ID);
+    store.releaseShadowSource(DEVICE_ID, 'disconnect');
 
     // assert
     assert.deepStrictEqual(notifications, []);
@@ -570,15 +818,19 @@ describe('releaseShadowSource', () => {
   // not restamped, and no listener hears about a change that did not happen.
   test('moves no value and notifies nobody when it runs again on a later poll of the same silence', () => {
     // arrange
-    const store = createDeviceStateStore(fixedStoreOptions());
+    let currentTime = FIRST_RECEIPT;
+    const clock: Clock = { now: () => currentTime };
+    const store = createDeviceStateStore(storeOptions(clock));
     store.applyDiscovery(geminiDevice());
     store.applyReportedPatch(DEVICE_ID, { data: { water_level: 4 }, state: { wifi_signal_dbm: -54 }, version: 90 });
     const notifications: Notification[] = [];
     store.subscribe(DEVICE_ID, recordInto(notifications));
 
     // act
-    store.releaseShadowSource(DEVICE_ID);
-    store.releaseShadowSource(DEVICE_ID);
+    currentTime = SECOND_RECEIPT;
+    store.releaseShadowSource(DEVICE_ID, 'disconnect');
+    currentTime = SECOND_RECEIPT + 1_000;
+    store.releaseShadowSource(DEVICE_ID, 'disconnect');
 
     // assert
     assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
@@ -598,10 +850,20 @@ describe('releaseShadowSource', () => {
     const store = versionedStore();
 
     // act
-    store.releaseShadowSource(DEVICE_ID);
+    store.releaseShadowSource(DEVICE_ID, 'disconnect');
+    const snapshot = store.snapshot(DEVICE_ID);
 
     // assert
-    assert.strictEqual(Object.isFrozen(store.snapshot(DEVICE_ID)), true);
+    assert.deepStrictEqual(snapshot, {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    });
+    assert.strictEqual(Object.isFrozen(snapshot), true);
   });
 
   // Silence belongs to one controller, so the handover it triggers must too. A
@@ -617,7 +879,7 @@ describe('releaseShadowSource', () => {
     store.applyReportedPatch(SECOND_DEVICE_ID, { data: { water_level: 5 }, state: undefined, version: 91 });
 
     // act
-    store.releaseShadowSource(DEVICE_ID);
+    store.releaseShadowSource(DEVICE_ID, 'disconnect');
     store.applyDiscovery(geminiDevice());
     store.applyDiscovery({ ...geminiDevice(), deviceId: SECOND_DEVICE_ID, serialNumber: 'serial-2' });
 
@@ -642,13 +904,20 @@ describe('releaseShadowSource', () => {
     store.subscribe(DEVICE_ID, recordInto(notifications));
 
     // act
-    store.releaseShadowSource(SECOND_DEVICE_ID);
+    store.releaseShadowSource(SECOND_DEVICE_ID, 'disconnect');
 
     // assert
-    assert.deepStrictEqual(
-      { held: store.snapshot(DEVICE_ID)?.shadowVersion, absent: store.snapshot(SECOND_DEVICE_ID), notifications },
-      { held: 5, absent: undefined, notifications: [] },
-    );
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: 5,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    });
+    assert.strictEqual(store.snapshot(SECOND_DEVICE_ID), undefined);
+    assert.deepStrictEqual(notifications, []);
   });
 });
 
@@ -672,42 +941,119 @@ describe('subscribe', () => {
     // arrange
     const store = createDeviceStateStore(fixedStoreOptions());
     store.applyDiscovery(geminiDevice());
+    const expectedPrevious: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    };
+    const expectedSnapshot: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 7, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    };
     const notifications: Notification[] = [];
     store.subscribe(DEVICE_ID, recordInto(notifications));
 
     // act
-    store.applyReportedPatch(DEVICE_ID, { data: { water_level: 7 }, state: undefined, version: undefined });
+    const snapshot = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 7 }, state: undefined, version: undefined });
 
     // assert
-    assert.deepStrictEqual(notifications, [{ changedKeys: ['water_level'], waterLevel: 7, previousWaterLevel: 1 }]);
+    assert.deepStrictEqual(snapshot, expectedSnapshot);
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), expectedSnapshot);
+    assert.deepStrictEqual(notifications, [{ next: expectedSnapshot, previous: expectedPrevious, changedKeys: ['water_level'] }]);
   });
 
   test('reports every changed key in a stable order', () => {
     // arrange
     const store = createDeviceStateStore(fixedStoreOptions());
     store.applyDiscovery(geminiDevice());
+    const expectedPrevious: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    };
+    const expectedSnapshot: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 7, primary_pump_running: false, ac_power: false },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    };
     const notifications: Notification[] = [];
     store.subscribe(DEVICE_ID, recordInto(notifications));
 
     // act
-    store.applyReportedPatch(DEVICE_ID, { data: { water_level: 7, ac_power: false }, state: undefined, version: undefined });
+    const snapshot = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 7, ac_power: false }, state: undefined, version: undefined });
 
     // assert
-    assert.deepStrictEqual(notifications, [{ changedKeys: ['ac_power', 'water_level'], waterLevel: 7, previousWaterLevel: 1 }]);
+    assert.deepStrictEqual(snapshot, expectedSnapshot);
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), expectedSnapshot);
+    assert.deepStrictEqual(notifications, [{ next: expectedSnapshot, previous: expectedPrevious, changedKeys: ['ac_power', 'water_level'] }]);
   });
 
-  test('notifies no listener for a heartbeat that repeats the stored values', () => {
+  test('notifies a listener of an accepted heartbeat that repeats the stored values', () => {
     // arrange
-    const store = createDeviceStateStore(fixedStoreOptions());
+    let currentTime = FIRST_RECEIPT;
+    const store = createDeviceStateStore(storeOptions({ now: () => currentTime }));
     store.applyDiscovery(geminiDevice());
     const notifications: Notification[] = [];
     store.subscribe(DEVICE_ID, recordInto(notifications));
 
     // act
+    currentTime = SECOND_RECEIPT;
     store.applyReportedPatch(DEVICE_ID, { data: { water_level: 1, ac_power: true }, state: undefined, version: undefined });
 
     // assert
-    assert.deepStrictEqual(notifications, []);
+    assert.deepStrictEqual(
+      notifications.map(({ next, changedKeys }) => ({ receivedAt: next.receivedAt, changedKeys, data: next.data })),
+      [{ receivedAt: SECOND_RECEIPT, changedKeys: [], data: { water_level: 1, primary_pump_running: false, ac_power: true } }],
+    );
+  });
+
+  test('notifies an accepted unchanged heartbeat and ignores a duplicate before changed power', () => {
+    // arrange
+    let currentTime = FIRST_RECEIPT;
+    const store = createDeviceStateStore(storeOptions({ now: () => currentTime }));
+    store.applyDiscovery(geminiDevice());
+    const notifications: Notification[] = [];
+    store.subscribe(DEVICE_ID, recordInto(notifications));
+    store.applyReportedPatch(DEVICE_ID, { data: { primary_pump_running: true, ac_power: true }, state: undefined, version: 7 });
+
+    // act
+    currentTime = SECOND_RECEIPT;
+    store.applyReportedPatch(DEVICE_ID, { data: { primary_pump_running: true, ac_power: true }, state: undefined, version: 8 });
+    currentTime += 1;
+    store.applyReportedPatch(DEVICE_ID, { data: { ac_power: false }, state: undefined, version: 8 });
+    currentTime += 1;
+    store.applyReportedPatch(DEVICE_ID, { data: { ac_power: 'invalid' }, state: undefined, version: 9 });
+
+    // assert
+    assert.deepStrictEqual(
+      notifications.map(({ next, changedKeys }) => ({ receivedAt: next.receivedAt, changedKeys, acPower: next.data.ac_power })),
+      [
+        { receivedAt: FIRST_RECEIPT, changedKeys: ['primary_pump_running'], acPower: true },
+        { receivedAt: SECOND_RECEIPT, changedKeys: [], acPower: true },
+        { receivedAt: SECOND_RECEIPT + 2, changedKeys: ['ac_power'], acPower: 'invalid' },
+      ],
+    );
+    assert.deepStrictEqual(
+      { receivedAt: store.snapshot(DEVICE_ID)?.receivedAt, shadowVersion: store.snapshot(DEVICE_ID)?.shadowVersion },
+      { receivedAt: SECOND_RECEIPT + 2, shadowVersion: 9 },
+    );
   });
 
   test('notifies no listener for a patch that reports neither section', () => {
@@ -740,14 +1086,25 @@ describe('subscribe', () => {
   test('reports no previous snapshot and every key the device record supplied on a first discovery', () => {
     // arrange
     const store = createDeviceStateStore(fixedStoreOptions());
+    const expectedSnapshot: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    };
     const notifications: Notification[] = [];
     store.subscribe(DEVICE_ID, recordInto(notifications));
 
     // act
-    store.applyDiscovery(geminiDevice());
+    const snapshot = store.applyDiscovery(geminiDevice());
 
     // assert
-    assert.deepStrictEqual(notifications, [{ changedKeys: ['ac_power', 'primary_pump_running', 'water_level'], waterLevel: 1, previousWaterLevel: undefined }]);
+    assert.deepStrictEqual(snapshot, expectedSnapshot);
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), expectedSnapshot);
+    assert.deepStrictEqual(notifications, [{ next: expectedSnapshot, previous: undefined, changedKeys: ['ac_power', 'primary_pump_running', 'water_level'] }]);
   });
 
   test('notifies no listener when two identical polls repeat a structured value', () => {
@@ -768,28 +1125,68 @@ describe('subscribe', () => {
     // arrange
     const store = createDeviceStateStore(fixedStoreOptions());
     store.applyDiscovery({ ...geminiDevice(), data: { water_level: 1, readings: { depth: 3 } } });
+    const expectedPrevious: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, readings: { depth: 3 } },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    };
+    const expectedSnapshot: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, readings: { depth: 4 } },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    };
     const notifications: Notification[] = [];
     store.subscribe(DEVICE_ID, recordInto(notifications));
 
     // act
-    store.applyDiscovery({ ...geminiDevice(), data: { water_level: 1, readings: { depth: 4 } } });
+    const snapshot = store.applyDiscovery({ ...geminiDevice(), data: { water_level: 1, readings: { depth: 4 } } });
 
     // assert
-    assert.deepStrictEqual(notifications, [{ changedKeys: ['readings'], waterLevel: 1, previousWaterLevel: 1 }]);
+    assert.deepStrictEqual(snapshot, expectedSnapshot);
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), expectedSnapshot);
+    assert.deepStrictEqual(notifications, [{ next: expectedSnapshot, previous: expectedPrevious, changedKeys: ['readings'] }]);
   });
 
   test('reports a key one record carries and the other omits as changed', () => {
     // arrange
     const store = createDeviceStateStore(fixedStoreOptions());
     store.applyDiscovery({ ...geminiDevice(), data: { water_level: 1 } });
+    const expectedPrevious: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1 },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    };
+    const expectedSnapshot: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, readings: { depth: 3 } },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    };
     const notifications: Notification[] = [];
     store.subscribe(DEVICE_ID, recordInto(notifications));
 
     // act
-    store.applyDiscovery({ ...geminiDevice(), data: { water_level: 1, readings: { depth: 3 } } });
+    const snapshot = store.applyDiscovery({ ...geminiDevice(), data: { water_level: 1, readings: { depth: 3 } } });
 
     // assert
-    assert.deepStrictEqual(notifications, [{ changedKeys: ['readings'], waterLevel: 1, previousWaterLevel: 1 }]);
+    assert.deepStrictEqual(snapshot, expectedSnapshot);
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), expectedSnapshot);
+    assert.deepStrictEqual(notifications, [{ next: expectedSnapshot, previous: expectedPrevious, changedKeys: ['readings'] }]);
   });
 
   test('notifies no listener registered for a different device', () => {
@@ -812,6 +1209,24 @@ describe('subscribe', () => {
     const messages: string[] = [];
     const store = createDeviceStateStore(fixedStoreOptions(messages));
     store.applyDiscovery(geminiDevice());
+    const expectedSnapshot: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 7, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    };
+    const expectedPrevious: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    };
     const notifications: Notification[] = [];
     store.subscribe(DEVICE_ID, () => {
       throw new Error('the listener read water_level 7 from account-1_serial-1');
@@ -822,8 +1237,9 @@ describe('subscribe', () => {
     const snapshot = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 7 }, state: undefined, version: undefined });
 
     // assert
-    assert.strictEqual(snapshot?.data.water_level, 7);
-    assert.deepStrictEqual(notifications, [{ changedKeys: ['water_level'], waterLevel: 7, previousWaterLevel: 1 }]);
+    assert.deepStrictEqual(snapshot, expectedSnapshot);
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), expectedSnapshot);
+    assert.deepStrictEqual(notifications, [{ next: expectedSnapshot, previous: expectedPrevious, changedKeys: ['water_level'] }]);
     assert.deepStrictEqual(messages, ['A device snapshot listener failed.']);
   });
 });
@@ -853,6 +1269,15 @@ describe('remove', () => {
 
     // assert
     assert.deepStrictEqual(store.deviceIds(), [DEVICE_ID]);
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    });
   });
 
   test('starts a fresh observation epoch, so a rediscovered deviceId gets no previous shadow version', () => {
@@ -896,8 +1321,11 @@ describe('snapshot', () => {
     // arrange
     const store = createDeviceStateStore(fixedStoreOptions());
 
-    // act & assert
-    assert.strictEqual(store.snapshot('account-1_serial-9'), undefined);
+    // act
+    const snapshot = store.snapshot('account-1_serial-9');
+
+    // assert
+    assert.strictEqual(snapshot, undefined);
   });
 });
 
@@ -906,8 +1334,11 @@ describe('deviceIds', () => {
     // arrange
     const store = createDeviceStateStore(fixedStoreOptions());
 
-    // act & assert
-    assert.deepStrictEqual(store.deviceIds(), []);
+    // act
+    const deviceIds = store.deviceIds();
+
+    // assert
+    assert.deepStrictEqual(deviceIds, []);
   });
 
   test('reports every stored identifier', () => {

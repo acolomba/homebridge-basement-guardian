@@ -1,0 +1,29 @@
+{
+  "findingId": "CR-08-ROOT-002",
+  "command": "node --test --test-reporter=tap --test-name-pattern='redacts a serialized registered secret inside an Error parameter' dist-test/test/logging.test.js",
+  "argv": [
+    "node",
+    "--test",
+    "--test-reporter=tap",
+    "--test-name-pattern=redacts a serialized registered secret inside an Error parameter",
+    "dist-test/test/logging.test.js"
+  ],
+  "cwd": "/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian",
+  "sourceCommit": "a18d3141fd7aceab702d04c2bc482e8e7ed7512b",
+  "sourceBlob": "b63fe57face52149c687e342026e6f36c433bc64",
+  "testBlob": "a48a46224448d24fea09da1eba434c1a179e36a3",
+  "nodeVersion": "v26.12.1",
+  "startedAt": "2026-10-23T02:39:29.082Z",
+  "finishedAt": "2026-10-23T02:39:29.083Z",
+  "exitCode": 1,
+  "targetTest": "redacts a serialized registered secret inside an Error parameter",
+  "targetFile": "test/logging.test.ts",
+  "expected": "The Homebridge error delegate receives TypeError: rejected {\"credential\":\"[redacted]\"}; no character of the registered secret reaches it.",
+  "actual": "The delegate received TypeError: rejected {\"credential\":\"my\\\"pass\"}, exposing the registered secret in JSON-escaped form.",
+  "semanticAssessment": "The active named case compiled and executed once against the unchanged committed src/logging.ts blob. Its exact delegated-call assertion failed because the JSON-escaped registered secret reached the Homebridge logger. This is the intended credential disclosure, not a build, runner, or environment failure. All credential text is synthetic.",
+  "productionUnchanged": true,
+  "compileCommand": "npm run build:test",
+  "compileExitCode": 0,
+  "regressionPatch": "diff --git a/test/logging.test.ts b/test/logging.test.ts\nindex 49ff749..a48a462 100644\n--- a/test/logging.test.ts\n+++ b/test/logging.test.ts\n@@ -207,6 +207,22 @@ test('substitutes a registered secret inside an Error parameter and keeps its cl\n   verify(delegate);\n });\n \n+test('redacts a serialized registered secret inside an Error parameter', () => {\n+  // arrange\n+  const secret = 'my\"pass';\n+  const delegate = createDelegate();\n+  when(() => {\n+    delegate.error('the grant was rejected', `TypeError: rejected {\"credential\":\"${REDACTED}\"}`);\n+  }).thenReturn(undefined);\n+  const log = createRedactingLogger({ delegate, secrets: [secret] });\n+\n+  // act\n+  log.error('the grant was rejected', new TypeError(`rejected ${JSON.stringify({ credential: secret })}`));\n+\n+  // assert\n+  verify(delegate);\n+});\n+\n test('describes a parameter that cannot be serialized', () => {\n   // arrange\n   const delegate = createDelegate();\n",
+  "output": "TAP version 13\n# Subtest: redacts a serialized registered secret inside an Error parameter\nnot ok 1 - redacts a serialized registered secret inside an Error parameter\n  ---\n  duration_ms: 3.564375\n  type: 'test'\n  location: '/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/dist-test/test/logging.test.js:160:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Didn't expect homebridge logging.error(\"the grant was rejected\", \"TypeError: rejected {\\\"credential\\\":\\\"my\\\\\\\"pass\\\"}\") to be called.\n    \n    Remaining expectations:\n    when(() => homebridge logging.error(\"the grant was rejected\", \"TypeError: rejected {\\\"credential\\\":\\\"[redacted]\\\"}\")).thenReturn(undefined).between(1, 1)\n    - Expected\n    + Received\n    \n        \"the grant was rejected\",\n    -   \"TypeError: rejected {\\\"credential\\\":\\\"[redacted]\\\"}\",\n    +   \"TypeError: rejected {\\\"credential\\\":\\\"my\\\\\\\"pass\\\"}\"\n  code: 'ERR_TEST_FAILURE'\n  expected:\n    0: 'the grant was rejected'\n    1: 'TypeError: rejected {\"credential\":\"[redacted]\"}'\n  actual:\n    0: 'the grant was rejected'\n    1: 'TypeError: rejected {\"credential\":\"my\\\\\"pass\"}'\n  stack: |-\n    FlexibleRepository.getValueForUnexpectedCall (file:///Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/node_modules/strong-mock/dist/index.js:401:11)\n    Proxy.<anonymous> (file:///Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/node_modules/strong-mock/dist/index.js:303:21)\n    write.error (file:///Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/dist-test/src/logging.js:93:25)\n    TestContext.<anonymous> (file:///Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/dist-test/test/logging.test.js:169:9)\n    Test.runInAsyncScope (node:async_hooks:226:14)\n    Test.run (node:internal/test_runner/test:1402:25)\n    Test.start (node:internal/test_runner/test:1262:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 160.586917\n"
+}

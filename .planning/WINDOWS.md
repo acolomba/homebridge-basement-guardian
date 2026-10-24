@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 5
+open_count: 17
 waived_count: 19
-fixed_count: 21
-total_count: 45
-last_updated: 2026-09-05T18:39:00.027Z
+fixed_count: 22
+total_count: 58
+last_updated: 2026-10-23T07:54:47.964Z
 ---
 
 # Broken Windows Ledger
@@ -50,7 +50,7 @@ last_updated: 2026-09-05T18:39:00.027Z
 | 33 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-VERIFICATION.md |  | 05-VERIFICATION.md lists 'README: the plugin holds no value back while it waits is now a true statement about the shipped code' among its gaps_closed, and 05-VALIDATION.md's gap-closure mutations table pins its documentation row on the same sentence. 05-REVIEW-2.md CR-04 showed the sentence false for the whole window its paragraph is about, and plan 05-19 deleted it. Neither record was edited: the report belongs to a verifier and the table to plan 05-10's round. A re-verification should settle both. | fixed |  | 2026-09-03T00:49:02.153Z | 2026-09-03T12:30:28.207Z |
 | 34 | 05 | todo | src/device/state.ts |  | Telemetry ownership has no expiry of its own. CR-03 guarded establishing the watermark, as the review prescribed, not retaining it. Measured by the third verification (probe P9a): one telemetry heartbeat, then 17 metadata-only reports over four hours with the poll reporting 31 throughout, left the store frozen at 3, shadowSilent false, and every scope vouched for. This follows D-13 as written and plan 05-15's stated decision, and may be unreachable in practice if REST reads the same shadow. Wants a maintainer ruling on whether ownership should lapse on telemetry age rather than on message silence. | fixed |  | 2026-09-03T12:31:37.763Z | 2026-09-03T23:43:28.353Z |
 | 35 | 05 | unrun-verify | src/device/state.ts |  | The carriesObservation narrowing is pinned at the unit tier alone. CR-03's fix reads patch.data in nextShadowVersion while carriesObservation still answers data or state, and the half that keeps a metadata-only report counting as the device speaking is proven by test/device/state.test.ts and by one scenario assertion. The third verification listed this among three protections living at one tier only, and unlike the other two it had no ledger entry. Recorded so a later reader does not mistake single-tier cover for absent cover. | open |  | 2026-09-03T12:31:38.115Z |  |
-| 36 | 05 | deviation | .planning/STATE.md |  | Closing the Phase 1 requirement block (quick task 260903-ho5) makes two SYNC-03 sentences in STATE.md stale. Line 50, Current Position: "SYNC-03 stays pending with its reason recorded." Line 291, Accumulated Context: "[Phase 05]: SYNC-03 stays pending because its row sits in a Phase 1 block where no requirement is marked complete; closing one row of that block on Phase 5 evidence would misreport which phase delivered it". Both are now false: all twelve Phase 1 identifiers read Complete and SYNC-03 reads Phase 1, Phase 5. Prohibition 6 of plan 260903-ho5 forbade editing STATE.md here because a second session may share the working tree. Incidental finding, outside that task scope: line 386 in Blockers still carries "A shadow that goes silent never releases the telemetry watermark (src/device/state.ts pollTelemetry), so no REST poll refreshes telemetry for a device whose live path spoke and then stopped; releasing it on silence changes D-15/SYNC-03 and needs a decision" as an open concern, while ledger entry 5 records the same defect fixed on 2026-09-02 and SYNC-03 own amendment ratifies the fix. | open |  | 2026-09-03T17:17:18.027Z |  |
+| 36 | 05 | deviation | .planning/STATE.md |  | Closing the Phase 1 requirement block (quick task 260903-ho5) makes two SYNC-03 sentences in STATE.md stale. Line 50, Current Position: "SYNC-03 stays pending with its reason recorded." Line 291, Accumulated Context: "[Phase 05]: SYNC-03 stays pending because its row sits in a Phase 1 block where no requirement is marked complete; closing one row of that block on Phase 5 evidence would misreport which phase delivered it". Both are now false: all twelve Phase 1 identifiers read Complete and SYNC-03 reads Phase 1, Phase 5. Prohibition 6 of plan 260903-ho5 forbade editing STATE.md here because a second session may share the working tree. Incidental finding, outside that task scope: line 386 in Blockers still carries "A shadow that goes silent never releases the telemetry watermark (src/device/state.ts pollTelemetry), so no REST poll refreshes telemetry for a device whose live path spoke and then stopped; releasing it on silence changes D-15/SYNC-03 and needs a decision" as an open concern, while ledger entry 5 records the same defect fixed on 2026-09-02 and SYNC-03 own amendment ratifies the fix. | fixed |  | 2026-09-03T17:17:18.027Z | 2026-10-23T07:54:47.964Z |
 | 37 | 05 | unrun-verify | .planning/WINDOWS.md |  | WINDOWS ledger entry 2 reads fixed with no reason recorded, and its description still says "no test fails when it is removed" about dropping !halted from commandTransportReadyNow(). Quick task 260903-ho5 measured that this is stale: 05-VERIFICATION.md M12 re-ran the same mutation on 2026-09-03 and it fails 2 unit cases and 1 scenario, because WR-03 scope withdrawal and 05-16 cases made the term load-bearing. The ledger has no edit verb, so the correction is recorded here and in the First-round reconciliation note of 05-VALIDATION.md. First-round row 17 keeps a "green, mutation failed nothing" status because the row is a claim about its own named test and its own named mutation, and the tests that now pin the term were written by later rounds. | fixed |  | 2026-09-03T17:24:02.836Z | 2026-09-04T21:27:38.961Z |
 | 38 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md |  | Entry 32 states twenty-two rows in the second gap-closure round table read pending. Quick task 260903-ho5 measured twenty-four. The file also holds two prose mentions of the pending marker that are not cells, which is the likeliest source of the difference. The ledger has no edit verb, so the correction is recorded here and in the Second-round reconciliation note of 05-VALIDATION.md. The 24 split by plan: 05-13 three rows, 05-14 four, 05-15 three, 05-16 four, 05-17 three, 05-18 five, 05-19 two. | fixed |  | 2026-09-03T17:28:08.692Z | 2026-09-04T21:28:56.130Z |
 | 39 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md | 95 | First-round row 2 was reconciled to a status its citation did not carry, and the verification of quick task 260903-ho5 caught it. The cell read shipped, whose load-bearing clause is that the named mutation failed at the row's own tier; the row's command is node --test on monitoringHealth.test.js, but 05-01 mutation 2 names three cases that all live in test/runtime/accountRuntime.test.ts, and 05-01-SUMMARY.md:241 names no module at all, unlike every other 05-01 entry that failed a unit case. The mutation is structurally unreachable from that tier: isShadowSilent is private to monitoringHealth.ts:146, shadowConnected is a local of accountRuntime.ts:272, and monitoringHealth.test.ts imports only monitoringHealth.js and clock.js. Corrected to green, blind at this tier. The mutation was not re-run, so the correction rests on reachability rather than on a fresh measurement. This is ledger entry 33's shape reproduced inside the task written to repair it, at one cell of forty-six. | fixed |  | 2026-09-03T17:44:53.966Z | 2026-09-04T21:28:46.102Z |
@@ -60,6 +60,19 @@ last_updated: 2026-09-05T18:39:00.027Z
 | 43 | 05.1 | deviation | src/runtime/accountRuntime.ts | 762 | A stray message from a removed device still re-arms lastShadowMessageAt via health.recordShadowMessage; the stamp is inert but nothing releases it | fixed |  | 2026-09-04T05:02:44.791Z | 2026-09-04T21:01:33.546Z |
 | 44 | 06 | unmet-truth | SECURITY.md |  | Private vulnerability reporting could not be enabled via gh api (404 on PUT/GET) — likely gated behind GitHub Advanced Security for private repos on this account tier; requires maintainer action (make repo public or confirm GHAS) per 06-05-SUMMARY.md Known Gaps | open |  | 2026-09-05T02:43:40.441Z |  |
 | 45 | 06 | unmet-truth | src/cloud/api.ts |  | The real-pump suite's heartbeats.feature connection-health scenario fails reproducibly (2/2 live runs against the real vendor account, 2026-09-05) with an uncaught InformationalError: socket idle timeout from an HTTP/2 stream with no error listener, surfacing during a ~960s idle window between vendor calls -- the same order of magnitude as production's default 300s+ pollInterval. src/cloud/api.ts and src/cloud/auth.ts both call Node's global fetch() (undici), which can auto-negotiate HTTP/2 and pool connections; an idle pooled connection's session-idle-timeout event, if unhandled, crashes the whole process rather than surfacing as a caught rejection -- a materially worse failure mode than the stale/untrustworthy-marking this plugin's safety semantics are built around. Blocks dev/prep/release-checklist.md's real-home-tests-pass gate. Needs investigation: whether the idle-timeout error is catchable at the app level (explicit undici dispatcher/agent config, disabling HTTP/2, or per-connection error handling) or is inherent to Node's global fetch and needs a different transport. | fixed |  | 2026-09-05T15:40:50.317Z | 2026-09-05T18:39:00.027Z |
+| 46 | 3 | deviation | .planning/phases/03-device-and-persistence-conformance/03-STATE-REVIEW.md | 714 | [code-review-sweep] CR-03-STATE-008 commit 18e8b83757f7aa1dcf38f8b61cb17ed116e48539 began before repeating a formatter-changing pre-step. Normal all-pair hooks and later exact-byte pre-step passed; no history rewrite. The ordering deviation remains documented for phase/milestone disposition. | open |  | 2026-10-14T17:00:50.997Z |  |
+| 47 | 3 | deviation | .planning/phases/03-device-and-persistence-conformance/03-DECODING-REVIEW.md | 375 | [code-review-sweep] CR-03-DECODING-005 private GeminiFieldScope removal at a63a9eb lacked the required alias-specific pre-edit Fallow trace. Full source reads/two local uses, four public-symbol probes and runtime/type equivalence were recorded; none substitutes for that missing trace. No retroactive compliance or history rewrite; phase/milestone disposition remains. | open |  | 2026-10-14T18:04:25.131Z |  |
+| 48 | 4 | deviation | .planning/phases/04-runtime-conformance/04-11-SUMMARY.md |  | [code-review-sweep] The 04-11 executor first wrote its execution summary before running that exact path through Fallow guard. The subsequent guard passed before further edits but supplies no retroactive pre-edit evidence. Task-level code guards and checks remain valid. Disclosed at ac52e22; native /private/tmp/guardian-04-11-closeout/summary-guard.json. Keep this process gap open and unwaived. | open |  | 2026-10-15T13:12:31.652Z |  |
+| 49 | 4 | deviation | test/runtime/accountRuntime.test.ts |  | [code-review-sweep] ACCOUNT-013 fixer began formatter/build work before collecting the terminal result of ESLint --fix session 47163, active 2026-10-15T14:25:37.372Z to terminal collection at 14:25:48.809Z. Intermediate native streams remain under /private/tmp/guardian-04-account-013/. Later serial build, owner, direct, lint and restored controls pass on final inputs but do not repair historical ordering. Recorded in 04-07-SUMMARY and ACCOUNT report; leave open and unwaived. | open |  | 2026-10-15T14:39:42.000Z |  |
+| 50 | 4 | deviation | .planning/phases/04-runtime-conformance/04-07-SUMMARY.md |  | [code-review-sweep] Required gitdir gsd-plan-head-before-04-07 ledger is absent after plan execution. No contemporaneous pre-first-commit ledger can be proved; nothing was reconstructed. Summary uses documented e6f49a5 baseline and explicit actual 12 implementation commits separately from the 19-commit interposed interval. Native /private/tmp/guardian-04-07-closeout/measurement.json and summary disclose this limit. Actual Git and RED ancestry remain independently checked; leave missing process evidence open and unwaived. | open |  | 2026-10-15T14:39:42.174Z |  |
+| 51 | 4 | deviation | test/runtime/accountRuntime.test.ts |  | [code-review-sweep] ACCOUNT-022 preparation did not separately capture the initial formatter and lint-fixer input bytes. Exact edits and output patches remain, and both genuine native RED runs used identical fully captured final inputs before evidence commit 5987504. Subsequent passing checks do not reconstruct missing preparation bytes. Report and 04-12 summary disclose the gap; leave open and unwaived. | open |  | 2026-10-15T18:09:14.690Z |  |
+| 52 | 4 | deviation | .planning/phases/04-runtime-conformance/04-12-SUMMARY.md |  | [code-review-sweep] The 04-12 summary exact-path Fallow guard preceded its first write, but explicit canonical-root containment was captured only during self-check after creation. The absolute path was correct; the later passing containment check supplies no historical pre-write proof. Summary 9825036 and native /private/tmp/guardian-04-12-closeout/ disclose this process gap. Leave open and unwaived. | open |  | 2026-10-15T18:09:14.878Z |  |
+| 53 | 4 | deviation | .planning/state.json |  | [code-review-sweep] Parent state.advance-plan at 2026-10-15T18:15:57Z updated its generated state.json alongside STATE.md. The pre-command guard and first metadata commit/prestep listed STATE.md, ROADMAP and FINDINGS but omitted the generated JSON path. The JSON remained unstaged; later exact guard/checks/normal commit cannot supply pre-mutation proof. Record the omission openly, retain generated state, rerun full gate for JSON inputs, and leave this process gap open and unwaived. | open |  | 2026-10-15T18:16:50.338Z |  |
+| 54 | 4 | deviation | .planning/phases/04-runtime-conformance/04-13-PLAN.md |  | [code-review-sweep] Parent exact pre-commit step for follow-up declarations normalized end-of-file blank lines in new plans 13-17. Planner creation/revision guards existed, but parent did not refresh those five concrete path guards immediately before its formatter run; only ROADMAP/FINDINGS were freshly guarded. No source or semantic plan change occurred. Native guardian-04-followups-parent-prestep.stdout retains exit1 and exact file list; subsequent all-path guard and clean repeated checks do not supply historical pre-formatter proof. Leave open and unwaived. | open |  | 2026-10-15T21:45:31.998Z |  |
+| 55 | 4 | deviation | .planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md |  | [code-review-sweep] Plan 14 retains three native capture/order gaps: 032 display-only audit extraction had a syntax error without original UTC/separate streams; 033 preservation hash child required SIGTERM (01:42:47.662251-01:45:46.342230 UTC), and read-only audit overlapped it at 01:43:16.944439-01:43:17.750457 rather than running serially; 034 read-only sed/prettier check exited1 without a separate UTC/native envelope. Tool transcripts and original attempts remain. Corrected complete symlink manifests, serialized preservation/audit, final checks and normal hooks passed, but supply no missing historical capture or serial-order proof. No repository/build/index mutation occurred during the overlap. Report and native guardian032/033/034 directories disclose the limits. Leave open and unwaived. | open |  | 2026-10-16T02:12:35.820Z |  |
+| 56 | 4 | deviation | .planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md |  | [code-review-sweep] Plan15 retains read/help/query preparation outputs without separate original UTC/native envelopes across035-037. In036 an intermediate noEmit compiler attempt overlapped a read-only guard despite required serial order; final compiler-tests-serialized and guard-append-serialized reruns passed but do not provide historical ordering proof. Original transcripts, optional-access build failure, lint failures and failed temporary preservation proofs remain in guardian035/036/037 native records and report. No source/build/index mutation during the read-only overlap is claimed; corrected current proofs and passing hooks are not waivers. The037 pause was independently assessed as the explicitly declared local-builder/new-export relocation, not a new trace exception or historical pretrace pass. Leave actual capture/order gaps open and unwaived. | open |  | 2026-10-16T03:09:09.875Z |  |
+| 57 | 4 | deviation | .planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md |  | [code-review-sweep] Plan16 bootstrap/direct read and exact-process control calls include transcript-only evidence without separate original native UTC envelopes. In038 three sandbox owner attempts failed fs.watch setup with EMFILE and required owned-process termination; an initial tail-only message incorrectly called cases successful and blamed callback timing. Complete TAP corrected that diagnosis. Revised early teardown makes sandbox failure terminate naturally; authorized native filesystem owner/direct/full-gate runs pass, without proving the earlier failed attempts passed or a universal sandbox guarantee. Incorrect classifier filename/raw0 INVALID_RED, lint/proof failures, and literal npm lint cache-flag setup raw2 remain failures; corrected current-file classifier and bounded plan-command correction passed. No historical timestamp/order or permission proof is reconstructed. Report and guardian038/039/042 native records retain all attempts. Leave capture/process limits open and unwaived. | open |  | 2026-10-16T04:33:33.811Z |  |
+| 58 | 4 | deviation | .planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md |  | [code-review-sweep] In043 the controller freshly resolved fixer effort high but omitted the advertised explicit reasoning_effort spawn argument. The child inherited the same high controller effort, so no wrong-effort result is inferred; this still lacks the required explicit dispatch binding and is not retrofitted. Subsequent guidance requires explicit resolved effort on future typed spawns and schema-supported recording on followups. Controller read-only discovery/no-match failures and a truncated oversized checkpoint display were retained and accurately summarized; no missing historical native envelope or full-read result is invented. The report and guardian043-native checkpoint disclose the routing/capture limits. Leave open and unwaived. | open |  | 2026-10-16T04:53:53.049Z |  |
 
 ````json
 [
@@ -490,10 +503,10 @@ last_updated: 2026-09-05T18:39:00.027Z
     "file": ".planning/STATE.md",
     "line": null,
     "description": "Closing the Phase 1 requirement block (quick task 260903-ho5) makes two SYNC-03 sentences in STATE.md stale. Line 50, Current Position: \"SYNC-03 stays pending with its reason recorded.\" Line 291, Accumulated Context: \"[Phase 05]: SYNC-03 stays pending because its row sits in a Phase 1 block where no requirement is marked complete; closing one row of that block on Phase 5 evidence would misreport which phase delivered it\". Both are now false: all twelve Phase 1 identifiers read Complete and SYNC-03 reads Phase 1, Phase 5. Prohibition 6 of plan 260903-ho5 forbade editing STATE.md here because a second session may share the working tree. Incidental finding, outside that task scope: line 386 in Blockers still carries \"A shadow that goes silent never releases the telemetry watermark (src/device/state.ts pollTelemetry), so no REST poll refreshes telemetry for a device whose live path spoke and then stopped; releasing it on silence changes D-15/SYNC-03 and needs a decision\" as an open concern, while ledger entry 5 records the same defect fixed on 2026-09-02 and SYNC-03 own amendment ratifies the fix.",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-09-03T17:17:18.027Z",
-    "resolved_at": null
+    "resolved_at": "2026-10-23T07:54:47.964Z"
   },
   {
     "id": 37,
@@ -602,6 +615,175 @@ last_updated: 2026-09-05T18:39:00.027Z
     "reason": "",
     "recorded_at": "2026-09-05T15:40:50.317Z",
     "resolved_at": "2026-09-05T18:39:00.027Z"
+  },
+  {
+    "id": 46,
+    "kind": "deviation",
+    "phase": "3",
+    "file": ".planning/phases/03-device-and-persistence-conformance/03-STATE-REVIEW.md",
+    "line": 714,
+    "description": "[code-review-sweep] CR-03-STATE-008 commit 18e8b83757f7aa1dcf38f8b61cb17ed116e48539 began before repeating a formatter-changing pre-step. Normal all-pair hooks and later exact-byte pre-step passed; no history rewrite. The ordering deviation remains documented for phase/milestone disposition.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-14T17:00:50.997Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 47,
+    "kind": "deviation",
+    "phase": "3",
+    "file": ".planning/phases/03-device-and-persistence-conformance/03-DECODING-REVIEW.md",
+    "line": 375,
+    "description": "[code-review-sweep] CR-03-DECODING-005 private GeminiFieldScope removal at a63a9eb lacked the required alias-specific pre-edit Fallow trace. Full source reads/two local uses, four public-symbol probes and runtime/type equivalence were recorded; none substitutes for that missing trace. No retroactive compliance or history rewrite; phase/milestone disposition remains.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-14T18:04:25.131Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 48,
+    "kind": "deviation",
+    "phase": "4",
+    "file": ".planning/phases/04-runtime-conformance/04-11-SUMMARY.md",
+    "line": null,
+    "description": "[code-review-sweep] The 04-11 executor first wrote its execution summary before running that exact path through Fallow guard. The subsequent guard passed before further edits but supplies no retroactive pre-edit evidence. Task-level code guards and checks remain valid. Disclosed at ac52e22; native /private/tmp/guardian-04-11-closeout/summary-guard.json. Keep this process gap open and unwaived.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-15T13:12:31.652Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 49,
+    "kind": "deviation",
+    "phase": "4",
+    "file": "test/runtime/accountRuntime.test.ts",
+    "line": null,
+    "description": "[code-review-sweep] ACCOUNT-013 fixer began formatter/build work before collecting the terminal result of ESLint --fix session 47163, active 2026-10-15T14:25:37.372Z to terminal collection at 14:25:48.809Z. Intermediate native streams remain under /private/tmp/guardian-04-account-013/. Later serial build, owner, direct, lint and restored controls pass on final inputs but do not repair historical ordering. Recorded in 04-07-SUMMARY and ACCOUNT report; leave open and unwaived.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-15T14:39:42.000Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 50,
+    "kind": "deviation",
+    "phase": "4",
+    "file": ".planning/phases/04-runtime-conformance/04-07-SUMMARY.md",
+    "line": null,
+    "description": "[code-review-sweep] Required gitdir gsd-plan-head-before-04-07 ledger is absent after plan execution. No contemporaneous pre-first-commit ledger can be proved; nothing was reconstructed. Summary uses documented e6f49a5 baseline and explicit actual 12 implementation commits separately from the 19-commit interposed interval. Native /private/tmp/guardian-04-07-closeout/measurement.json and summary disclose this limit. Actual Git and RED ancestry remain independently checked; leave missing process evidence open and unwaived.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-15T14:39:42.174Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 51,
+    "kind": "deviation",
+    "phase": "4",
+    "file": "test/runtime/accountRuntime.test.ts",
+    "line": null,
+    "description": "[code-review-sweep] ACCOUNT-022 preparation did not separately capture the initial formatter and lint-fixer input bytes. Exact edits and output patches remain, and both genuine native RED runs used identical fully captured final inputs before evidence commit 5987504. Subsequent passing checks do not reconstruct missing preparation bytes. Report and 04-12 summary disclose the gap; leave open and unwaived.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-15T18:09:14.690Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 52,
+    "kind": "deviation",
+    "phase": "4",
+    "file": ".planning/phases/04-runtime-conformance/04-12-SUMMARY.md",
+    "line": null,
+    "description": "[code-review-sweep] The 04-12 summary exact-path Fallow guard preceded its first write, but explicit canonical-root containment was captured only during self-check after creation. The absolute path was correct; the later passing containment check supplies no historical pre-write proof. Summary 9825036 and native /private/tmp/guardian-04-12-closeout/ disclose this process gap. Leave open and unwaived.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-15T18:09:14.878Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 53,
+    "kind": "deviation",
+    "phase": "4",
+    "file": ".planning/state.json",
+    "line": null,
+    "description": "[code-review-sweep] Parent state.advance-plan at 2026-10-15T18:15:57Z updated its generated state.json alongside STATE.md. The pre-command guard and first metadata commit/prestep listed STATE.md, ROADMAP and FINDINGS but omitted the generated JSON path. The JSON remained unstaged; later exact guard/checks/normal commit cannot supply pre-mutation proof. Record the omission openly, retain generated state, rerun full gate for JSON inputs, and leave this process gap open and unwaived.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-15T18:16:50.338Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 54,
+    "kind": "deviation",
+    "phase": "4",
+    "file": ".planning/phases/04-runtime-conformance/04-13-PLAN.md",
+    "line": null,
+    "description": "[code-review-sweep] Parent exact pre-commit step for follow-up declarations normalized end-of-file blank lines in new plans 13-17. Planner creation/revision guards existed, but parent did not refresh those five concrete path guards immediately before its formatter run; only ROADMAP/FINDINGS were freshly guarded. No source or semantic plan change occurred. Native guardian-04-followups-parent-prestep.stdout retains exit1 and exact file list; subsequent all-path guard and clean repeated checks do not supply historical pre-formatter proof. Leave open and unwaived.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-15T21:45:31.998Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 55,
+    "kind": "deviation",
+    "phase": "4",
+    "file": ".planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md",
+    "line": null,
+    "description": "[code-review-sweep] Plan 14 retains three native capture/order gaps: 032 display-only audit extraction had a syntax error without original UTC/separate streams; 033 preservation hash child required SIGTERM (01:42:47.662251-01:45:46.342230 UTC), and read-only audit overlapped it at 01:43:16.944439-01:43:17.750457 rather than running serially; 034 read-only sed/prettier check exited1 without a separate UTC/native envelope. Tool transcripts and original attempts remain. Corrected complete symlink manifests, serialized preservation/audit, final checks and normal hooks passed, but supply no missing historical capture or serial-order proof. No repository/build/index mutation occurred during the overlap. Report and native guardian032/033/034 directories disclose the limits. Leave open and unwaived.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-16T02:12:35.820Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 56,
+    "kind": "deviation",
+    "phase": "4",
+    "file": ".planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md",
+    "line": null,
+    "description": "[code-review-sweep] Plan15 retains read/help/query preparation outputs without separate original UTC/native envelopes across035-037. In036 an intermediate noEmit compiler attempt overlapped a read-only guard despite required serial order; final compiler-tests-serialized and guard-append-serialized reruns passed but do not provide historical ordering proof. Original transcripts, optional-access build failure, lint failures and failed temporary preservation proofs remain in guardian035/036/037 native records and report. No source/build/index mutation during the read-only overlap is claimed; corrected current proofs and passing hooks are not waivers. The037 pause was independently assessed as the explicitly declared local-builder/new-export relocation, not a new trace exception or historical pretrace pass. Leave actual capture/order gaps open and unwaived.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-16T03:09:09.875Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 57,
+    "kind": "deviation",
+    "phase": "4",
+    "file": ".planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md",
+    "line": null,
+    "description": "[code-review-sweep] Plan16 bootstrap/direct read and exact-process control calls include transcript-only evidence without separate original native UTC envelopes. In038 three sandbox owner attempts failed fs.watch setup with EMFILE and required owned-process termination; an initial tail-only message incorrectly called cases successful and blamed callback timing. Complete TAP corrected that diagnosis. Revised early teardown makes sandbox failure terminate naturally; authorized native filesystem owner/direct/full-gate runs pass, without proving the earlier failed attempts passed or a universal sandbox guarantee. Incorrect classifier filename/raw0 INVALID_RED, lint/proof failures, and literal npm lint cache-flag setup raw2 remain failures; corrected current-file classifier and bounded plan-command correction passed. No historical timestamp/order or permission proof is reconstructed. Report and guardian038/039/042 native records retain all attempts. Leave capture/process limits open and unwaived.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-16T04:33:33.811Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 58,
+    "kind": "deviation",
+    "phase": "4",
+    "file": ".planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md",
+    "line": null,
+    "description": "[code-review-sweep] In043 the controller freshly resolved fixer effort high but omitted the advertised explicit reasoning_effort spawn argument. The child inherited the same high controller effort, so no wrong-effort result is inferred; this still lacks the required explicit dispatch binding and is not retrofitted. Subsequent guidance requires explicit resolved effort on future typed spawns and schema-supported recording on followups. Controller read-only discovery/no-match failures and a truncated oversized checkpoint display were retained and accurately summarized; no missing historical native envelope or full-read result is invented. The report and guardian043-native checkpoint disclose the routing/capture limits. Leave open and unwaived.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-16T04:53:53.049Z",
+    "resolved_at": null,
+    "milestone": null
   }
 ]
 ````

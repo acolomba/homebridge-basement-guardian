@@ -1,0 +1,18 @@
+{
+  "summary": {
+    "unused_exports": 0,
+    "unused_files": 0,
+    "duplicates": 1,
+    "circular_dependencies": 0,
+    "total": 1
+  },
+  "findings": [
+    {
+      "type": "duplicate_block",
+      "message": "Duplicate block (2 instances)",
+      "file": "features/real-pump/support/realWorld.ts",
+      "line": 177,
+      "related_file": "features/support/world.ts"
+    }
+  ]
+}

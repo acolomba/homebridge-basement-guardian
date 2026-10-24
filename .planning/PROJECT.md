@@ -12,19 +12,33 @@ HomeKit must promptly show trustworthy basement-protection conditions while clea
 
 An npm-ready v1 release candidate passes repository quality checks on Node.js 22 and 24 and supported Homebridge 1.x/2.x runtimes, with hardware and real-home gates G-001, G-002, G-003, and G-004 closed before `1.0.0` can be published.
 
+## Current State
+
+The code-review-sweep milestone is archived. Its eight phases and 17 requirements passed verification. The full repository check passed on the final executable tree. The [milestone audit](milestones/code-review-sweep-MILESTONE-AUDIT.md) records the accepted evidence limits and deferred live vendor confirmation.
+
+The next milestone has not been selected. Real-home and hardware gates G-001 through G-004 still block publication of `1.0.0`.
+
 ## Requirements
 
 ### Validated
 
+- ✓ ACC-01: Current accessory source and test scope conforms under the accepted review, lint, HAP parity and full-test boundary. The historical GATES round-15 STOP and two open scanner findings remain recorded; the edge taxonomy stays unresolved. — code-review-sweep, Phase 5
+- ✓ RUN-01: Runtime source modules and their paired tests conform. All 87 findings are independently closed; nine genuine bug histories retain regression evidence. The full check and three explicit human judgments pass. Historical audit and process limits remain recorded. — code-review-sweep, Phase 4
+- ✓ SC-01 through SC-05 have discriminating regression or mutation evidence, clean independent reviews, and a passing full repository gate. — code-review-sweep, Phase 1
+- ✓ All 19 cloud source/test/helper files conform to the rules. All 56 findings and six genuine bug histories are closed with independent verification and the full gate. Taxonomy and ALPN limits remain explicit. — code-review-sweep, Phase 2
+- ✓ The in-scope `src/` modules and paired tests passed the TypeScript, comment, and unit-test review. — code-review-sweep
+- ✓ The in-scope `features/**` files passed the behavioral-testing review. — code-review-sweep
+- ✓ Bugs found in the sweep have regressions within the accepted evidence boundary. The audit keeps three limited pre-fix histories visible. — code-review-sweep
 - ✓ A Homebridge administrator can configure one Basement Guardian account without exposing secrets in logs or accessory state. — Phase 1
 - ✓ Every valid Gemini on that account appears as one stable HomeKit accessory; unsupported or invalid profiles never produce fabricated state. — Phase 2
+- ✓ Flood risk, pump activity, mains power, battery condition, equipment faults, and connectivity health use truthful HomeKit semantics. — v1.0
+- ✓ Self-test and alarm-mute controls follow only the official Gemini command contract and reported device state. — v1.0 (alarm-mute contract stays provisional until G-001)
+- ✓ Cached accessories preserve safety state and identity through restarts, transport failures, profile drift, and transient discovery failures. — v1.0
+- ✓ The package, tests, licensing, privacy controls, and support paths are ready for a controlled release. — v1.0 (real-home gates G-001 to G-004 still block `1.0.0`)
 
 ### Active
 
-- [ ] Flood risk, pump activity, mains power, battery condition, equipment faults, and connectivity health use truthful HomeKit semantics.
-- [ ] Self-test and alarm-mute controls follow only the official Gemini command contract and reported device state.
-- [ ] Cached accessories preserve safety state and identity through restarts, transport failures, profile drift, and transient discovery failures.
-- [ ] The package, tests, licensing, privacy controls, support paths, and real-home validation are ready for a safe `1.0.0` release.
+- [ ] The real-home and hardware gates G-001, G-002, G-003, and G-004 close before `1.0.0` is published.
 
 ### Out of Scope
 
@@ -155,6 +169,7 @@ The following blocks preserve all 40 locked decisions from the [ingested decisio
 - **D-036 — Main or child bridge:** Work on either Homebridge bridge mode, recommend but do not guarantee a child bridge, and do not implement a parallel bridge mechanism.
 - **D-037 — Complete writes after API acceptance:** Keep reported state authoritative, track a 30-second pending request, clear on rejection/report/expiry, and never copy requested control state into safety data.
 - **D-038 — 2.5-second API deadline:** Return an operation timeout after 2.5 seconds, retain uncertain pending state, and never automatically retry a potentially delivered command.
+- **D-039 — Unreadable trust after a failed marking:** Present a self-clearing degradation as unreadable only when its ordinary inactive marking failed to publish; mark only that service's trust report, keep its stored value, clear it on the next ordinary push, and treat this as a narrow extension of the D-10 credential exception to D-05.
 
 </decisions>
 
@@ -186,4 +201,4 @@ The following blocks preserve all 40 locked decisions from the [ingested decisio
 - **Constructor dependency injection — preferred.** Prefer manual constructor injection for plugin-owned services, including vendor clients, token stores, transports, clocks, and state managers. Keep the Homebridge platform constructor compatible with `new (log, config, api)`. Production code can provide defaults through factories. Tests can inject fakes explicitly. This pattern is an implementation preference, not an ADR-locked decision. If another pattern gives a clear benefit, revisit this preference during phase discussion.
 
 ---
-*Last updated: 2026-09-04 after Phase 5.1 — per-pump trust withdrawal, controller-link diagnostic, and monotonic silence clock completed; RES-01/RES-02 refined and remain Complete*
+*Last updated: 2026-10-23 after archiving code-review-sweep*

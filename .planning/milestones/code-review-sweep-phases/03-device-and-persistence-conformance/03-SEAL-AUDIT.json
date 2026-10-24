@@ -1,0 +1,1352 @@
+{
+  "phase": "03-device-and-persistence-conformance",
+  "requirement": "DEV-01",
+  "status": "automated-audit-ready",
+  "auditRevision": "629cfc4a35527c7faf098e0f9937c29775332c17",
+  "tracer": {
+    "requirement": "DEV-01",
+    "reviewerRole": "gsd-code-reviewer",
+    "reviewer": "/root/phase3_state/state_initial_review",
+    "kind": "finding",
+    "findingId": "CR-03-STATE-011",
+    "paths": [
+      "test/device/state.test.ts",
+      ".planning/phases/03-device-and-persistence-conformance/03-STATE-REVIEW.md"
+    ],
+    "reviewRevision": "ade72e10f4ddd584067b080d1f78323fc93d3762",
+    "initialRevision": "1166da4d338eea327ceb08da7381dcf4982a6742",
+    "initialLocation": "test/device/state.test.ts:40-43",
+    "currentLocation": "test/device/state.test.ts:40-55",
+    "severity": "WARNING",
+    "commits": [
+      "90dac3919a7dc190ac29defc93b53d6ccd91379d",
+      "cf56276d664a91170c25f7210d49c246d885dd44"
+    ],
+    "ruleOrCleanScope": "Google style review, Functions: named function declarations; the local logger had neither an explicit function-type binding nor an outer-this need.",
+    "observedOutcome": "Fixed independently in STATE round 2; function record preserves the push body, Logging assignments and assertions. Zero open, new or reopened IDs.",
+    "nativeVerification": {
+      "command": "node --test --test-reporter=tap dist-test/test/device/state.test.js",
+      "exitCode": 0,
+      "tests": 52,
+      "passed": 52,
+      "skipped": 0,
+      "cancelled": 0,
+      "nodeVersion": "v26.11.1",
+      "record": "/private/tmp/state-011-owner.json",
+      "preStepRecord": "/private/tmp/state-011-pre.json",
+      "normalCommitRecord": "/private/tmp/state-011-commit.json"
+    }
+  },
+  "pairs": [
+    {
+      "name": "device/events",
+      "source": "src/device/events.ts",
+      "owner": "test/device/events.test.ts",
+      "typeOnly": true,
+      "directExit": 0,
+      "command": "npm run test:coverage:direct -- src/device/events.ts test/device/events.test.ts src/device/family.ts test/device/family.test.ts src/device/gemini.ts test/device/gemini.test.ts src/device/halo.ts test/device/halo.test.ts src/device/health.ts test/device/health.test.ts src/device/registry.ts test/device/registry.test.ts src/device/state.ts test/device/state.test.ts src/device/waterLevel.ts test/device/waterLevel.test.ts src/persistence/accessoryContext.ts test/persistence/accessoryContext.test.ts",
+      "revision": "629cfc4a35527c7faf098e0f9937c29775332c17",
+      "nodeVersion": "v26.11.1",
+      "selectorRecord": "/private/tmp/guardian-phase3-seal-nine-pairs.json",
+      "selectorVerifiedDeclarationOnly": true,
+      "authoredRuntimeCases": 0,
+      "declarationEvidence": "Strict positive/expected-error contracts; current source emits only export {}; the existing isolated runner accepts no executable coverage record."
+    },
+    {
+      "name": "device/family",
+      "source": "src/device/family.ts",
+      "owner": "test/device/family.test.ts",
+      "typeOnly": true,
+      "directExit": 0,
+      "command": "npm run test:coverage:direct -- src/device/events.ts test/device/events.test.ts src/device/family.ts test/device/family.test.ts src/device/gemini.ts test/device/gemini.test.ts src/device/halo.ts test/device/halo.test.ts src/device/health.ts test/device/health.test.ts src/device/registry.ts test/device/registry.test.ts src/device/state.ts test/device/state.test.ts src/device/waterLevel.ts test/device/waterLevel.test.ts src/persistence/accessoryContext.ts test/persistence/accessoryContext.test.ts",
+      "revision": "629cfc4a35527c7faf098e0f9937c29775332c17",
+      "nodeVersion": "v26.11.1",
+      "selectorRecord": "/private/tmp/guardian-phase3-seal-nine-pairs.json",
+      "selectorVerifiedDeclarationOnly": true,
+      "authoredRuntimeCases": 0,
+      "declarationEvidence": "Strict positive/expected-error contracts; current source emits only export {}; the existing isolated runner accepts no executable coverage record."
+    },
+    {
+      "name": "device/gemini",
+      "source": "src/device/gemini.ts",
+      "owner": "test/device/gemini.test.ts",
+      "typeOnly": false,
+      "directExit": 0,
+      "command": "node --test --experimental-test-coverage --test-coverage-include=dist-test/src/device/gemini.js --test-reporter=tap --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=/private/tmp/guardian-phase3-seal-gemini.lcov dist-test/test/device/gemini.test.js",
+      "revision": "629cfc4a35527c7faf098e0f9937c29775332c17",
+      "nodeVersion": "v26.11.1",
+      "selectorRecord": "/private/tmp/guardian-phase3-seal-nine-pairs.json",
+      "coverage": {
+        "lines": 100,
+        "functions": 100,
+        "branches": 100
+      },
+      "nativeDenominators": {
+        "representation": "compiled JavaScript, isolated source-only native LCOV",
+        "lines": 273,
+        "functions": 30,
+        "branches": 85
+      },
+      "authoredRuntimeCases": 88,
+      "nativeRecord": "/private/tmp/guardian-phase3-seal-native-gemini.json",
+      "lcov": "/private/tmp/guardian-phase3-seal-gemini.lcov"
+    },
+    {
+      "name": "device/halo",
+      "source": "src/device/halo.ts",
+      "owner": "test/device/halo.test.ts",
+      "typeOnly": false,
+      "directExit": 0,
+      "command": "node --test --experimental-test-coverage --test-coverage-include=dist-test/src/device/halo.js --test-reporter=tap --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=/private/tmp/guardian-phase3-seal-halo.lcov dist-test/test/device/halo.test.js",
+      "revision": "629cfc4a35527c7faf098e0f9937c29775332c17",
+      "nodeVersion": "v26.11.1",
+      "selectorRecord": "/private/tmp/guardian-phase3-seal-nine-pairs.json",
+      "coverage": {
+        "lines": 100,
+        "functions": 100,
+        "branches": 100
+      },
+      "nativeDenominators": {
+        "representation": "compiled JavaScript, isolated source-only native LCOV",
+        "lines": 6,
+        "functions": 0,
+        "branches": 1
+      },
+      "authoredRuntimeCases": 1,
+      "nativeRecord": "/private/tmp/guardian-phase3-seal-native-halo.json",
+      "lcov": "/private/tmp/guardian-phase3-seal-halo.lcov"
+    },
+    {
+      "name": "device/health",
+      "source": "src/device/health.ts",
+      "owner": "test/device/health.test.ts",
+      "typeOnly": true,
+      "directExit": 0,
+      "command": "npm run test:coverage:direct -- src/device/events.ts test/device/events.test.ts src/device/family.ts test/device/family.test.ts src/device/gemini.ts test/device/gemini.test.ts src/device/halo.ts test/device/halo.test.ts src/device/health.ts test/device/health.test.ts src/device/registry.ts test/device/registry.test.ts src/device/state.ts test/device/state.test.ts src/device/waterLevel.ts test/device/waterLevel.test.ts src/persistence/accessoryContext.ts test/persistence/accessoryContext.test.ts",
+      "revision": "629cfc4a35527c7faf098e0f9937c29775332c17",
+      "nodeVersion": "v26.11.1",
+      "selectorRecord": "/private/tmp/guardian-phase3-seal-nine-pairs.json",
+      "selectorVerifiedDeclarationOnly": true,
+      "authoredRuntimeCases": 0,
+      "declarationEvidence": "Strict positive/expected-error contracts; current source emits only export {}; the existing isolated runner accepts no executable coverage record."
+    },
+    {
+      "name": "device/registry",
+      "source": "src/device/registry.ts",
+      "owner": "test/device/registry.test.ts",
+      "typeOnly": false,
+      "directExit": 0,
+      "command": "node --test --experimental-test-coverage --test-coverage-include=dist-test/src/device/registry.js --test-reporter=tap --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=/private/tmp/guardian-phase3-seal-registry.lcov dist-test/test/device/registry.test.js",
+      "revision": "629cfc4a35527c7faf098e0f9937c29775332c17",
+      "nodeVersion": "v26.11.1",
+      "selectorRecord": "/private/tmp/guardian-phase3-seal-nine-pairs.json",
+      "coverage": {
+        "lines": 100,
+        "functions": 100,
+        "branches": 100
+      },
+      "nativeDenominators": {
+        "representation": "compiled JavaScript, isolated source-only native LCOV",
+        "lines": 53,
+        "functions": 3,
+        "branches": 9
+      },
+      "authoredRuntimeCases": 8,
+      "nativeRecord": "/private/tmp/guardian-phase3-seal-native-registry.json",
+      "lcov": "/private/tmp/guardian-phase3-seal-registry.lcov"
+    },
+    {
+      "name": "device/state",
+      "source": "src/device/state.ts",
+      "owner": "test/device/state.test.ts",
+      "typeOnly": false,
+      "directExit": 0,
+      "command": "node --test --experimental-test-coverage --test-coverage-include=dist-test/src/device/state.js --test-reporter=tap --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=/private/tmp/guardian-phase3-seal-state.lcov dist-test/test/device/state.test.js",
+      "revision": "629cfc4a35527c7faf098e0f9937c29775332c17",
+      "nodeVersion": "v26.11.1",
+      "selectorRecord": "/private/tmp/guardian-phase3-seal-nine-pairs.json",
+      "coverage": {
+        "lines": 100,
+        "functions": 100,
+        "branches": 100
+      },
+      "nativeDenominators": {
+        "representation": "compiled JavaScript, isolated source-only native LCOV",
+        "lines": 264,
+        "functions": 23,
+        "branches": 61
+      },
+      "authoredRuntimeCases": 52,
+      "nativeRecord": "/private/tmp/guardian-phase3-seal-native-state.json",
+      "lcov": "/private/tmp/guardian-phase3-seal-state.lcov"
+    },
+    {
+      "name": "device/waterLevel",
+      "source": "src/device/waterLevel.ts",
+      "owner": "test/device/waterLevel.test.ts",
+      "typeOnly": false,
+      "directExit": 0,
+      "command": "node --test --experimental-test-coverage --test-coverage-include=dist-test/src/device/waterLevel.js --test-reporter=tap --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=/private/tmp/guardian-phase3-seal-waterLevel.lcov dist-test/test/device/waterLevel.test.js",
+      "revision": "629cfc4a35527c7faf098e0f9937c29775332c17",
+      "nodeVersion": "v26.11.1",
+      "selectorRecord": "/private/tmp/guardian-phase3-seal-nine-pairs.json",
+      "coverage": {
+        "lines": 100,
+        "functions": 100,
+        "branches": 100
+      },
+      "nativeDenominators": {
+        "representation": "compiled JavaScript, isolated source-only native LCOV",
+        "lines": 62,
+        "functions": 2,
+        "branches": 4
+      },
+      "authoredRuntimeCases": 21,
+      "nativeRecord": "/private/tmp/guardian-phase3-seal-native-waterLevel.json",
+      "lcov": "/private/tmp/guardian-phase3-seal-waterLevel.lcov"
+    },
+    {
+      "name": "persistence/accessoryContext",
+      "source": "src/persistence/accessoryContext.ts",
+      "owner": "test/persistence/accessoryContext.test.ts",
+      "typeOnly": true,
+      "directExit": 0,
+      "command": "npm run test:coverage:direct -- src/device/events.ts test/device/events.test.ts src/device/family.ts test/device/family.test.ts src/device/gemini.ts test/device/gemini.test.ts src/device/halo.ts test/device/halo.test.ts src/device/health.ts test/device/health.test.ts src/device/registry.ts test/device/registry.test.ts src/device/state.ts test/device/state.test.ts src/device/waterLevel.ts test/device/waterLevel.test.ts src/persistence/accessoryContext.ts test/persistence/accessoryContext.test.ts",
+      "revision": "629cfc4a35527c7faf098e0f9937c29775332c17",
+      "nodeVersion": "v26.11.1",
+      "selectorRecord": "/private/tmp/guardian-phase3-seal-nine-pairs.json",
+      "selectorVerifiedDeclarationOnly": true,
+      "authoredRuntimeCases": 0,
+      "declarationEvidence": "Strict positive/expected-error contracts; current source emits only export {}; the existing isolated runner accepts no executable coverage record."
+    }
+  ],
+  "inventory": [
+    {
+      "path": "src/device/events.ts",
+      "scope": "core",
+      "batch": "support",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "d262943b0749a094c3e48488bbd952b26f103adf",
+      "blob": "425b8300ffa925696659be418345920c7525fed7",
+      "sha256": "d728fd448e6b377df263a99ea5c3e645c7ad7b488e3eb983f9ac361cb18627e1"
+    },
+    {
+      "path": "src/device/family.ts",
+      "scope": "core",
+      "batch": "decoding",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "e8b99aa3c3ca42bedef002f16561fb7c93b524ee",
+      "blob": "c8e59e594b2c01f7ef51930934a4335f67df8583",
+      "sha256": "7517dab522ace341ca3edbd48e1aba50de8076d9c9e2a76ca1a7a3904d040798"
+    },
+    {
+      "path": "src/device/gemini.ts",
+      "scope": "core",
+      "batch": "decoding",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "e8b99aa3c3ca42bedef002f16561fb7c93b524ee",
+      "blob": "7fcd51a8f010cead9a45002ab9949a2186206ec8",
+      "sha256": "995177d1a87ade122a0abc7b574e6dc7c0b9469bf09bfea50772abb703107a91"
+    },
+    {
+      "path": "src/device/halo.ts",
+      "scope": "core",
+      "batch": "support",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "d262943b0749a094c3e48488bbd952b26f103adf",
+      "blob": "6f35a139334067426d34e86f389878a7780ecc23",
+      "sha256": "63d44135c9758a8f64acd46d60fda2049a450e0a13caec1306b13481635dc0df"
+    },
+    {
+      "path": "src/device/health.ts",
+      "scope": "core",
+      "batch": "support",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "d262943b0749a094c3e48488bbd952b26f103adf",
+      "blob": "d616298673c9a0512ddf7b77bca0451871ddfcce",
+      "sha256": "773d20de69f0e7cd272cd6f5004c501bfcb2ca4535a8580927d4e24349336315"
+    },
+    {
+      "path": "src/device/registry.ts",
+      "scope": "core",
+      "batch": "support",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "d262943b0749a094c3e48488bbd952b26f103adf",
+      "blob": "82d9aa78efe5c1bd1a850989200e2bb681bf1738",
+      "sha256": "4289989cdf00d1610d20c1bce6f9d2ff397b27a2bb08517ddce0f88ed3f6a97e"
+    },
+    {
+      "path": "src/device/state.ts",
+      "scope": "core",
+      "batch": "state",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "ade72e10f4ddd584067b080d1f78323fc93d3762",
+      "blob": "ccee11846085280f5618622a36d19b5ba511643d",
+      "sha256": "fa30d75b41f52a5914f0debe76843190ec7d428cd760ccdaf42584160bbbfbeb"
+    },
+    {
+      "path": "src/device/waterLevel.ts",
+      "scope": "core",
+      "batch": "decoding",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "e8b99aa3c3ca42bedef002f16561fb7c93b524ee",
+      "blob": "d38218a7cfc9c2cc2e981dca549b51a8040d3a6b",
+      "sha256": "df8c07c960c5b1aa71dc9a75d781eb6a25e96c8faa9f70c2105e1713632bf75a"
+    },
+    {
+      "path": "src/persistence/accessoryContext.ts",
+      "scope": "core",
+      "batch": "support",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "d262943b0749a094c3e48488bbd952b26f103adf",
+      "blob": "9e7caad029838ebcbb9ad395b10d9b92652e1b15",
+      "sha256": "7a9ebe1e52b457184431d4304d4a9bd2fc5068715a3aab90f5c3f731c052cf75"
+    },
+    {
+      "path": "test/device/events.test.ts",
+      "scope": "core",
+      "batch": "support",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "d262943b0749a094c3e48488bbd952b26f103adf",
+      "blob": "419bb1cd9d0abea8b206a1afa74b7ff3455ddb35",
+      "sha256": "6acb3c34e23a10c9c7b8dedb7cc15764ab60312acd36268c183d3c4d4a291221"
+    },
+    {
+      "path": "test/device/family.test.ts",
+      "scope": "core",
+      "batch": "decoding",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "e8b99aa3c3ca42bedef002f16561fb7c93b524ee",
+      "blob": "fd85bba2d65d03c6c764931637ea8aafe3fae6a3",
+      "sha256": "99cbb5e91cc57cd0896a66baf6f0b4f0248b064baa5ffa0e1fc08c2f45330aa5"
+    },
+    {
+      "path": "test/device/gemini.test.ts",
+      "scope": "core",
+      "batch": "decoding",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "e8b99aa3c3ca42bedef002f16561fb7c93b524ee",
+      "blob": "413808364b23c834867132d2334ae10467a7b233",
+      "sha256": "b9ba447045611db912fada5feb0b7553b7a2285af72a32814dd6bccba06f54a8"
+    },
+    {
+      "path": "test/device/geminiSeeds.ts",
+      "scope": "helper",
+      "batch": "decoding",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "e8b99aa3c3ca42bedef002f16561fb7c93b524ee",
+      "blob": "f4a66bac599da41b8f154764ad07ddde0b83cf8a",
+      "sha256": "a03ffd540384127e548f0d3b7704d617dce84b2d52d4b4c3dd410f06762a19fe"
+    },
+    {
+      "path": "test/device/halo.test.ts",
+      "scope": "core",
+      "batch": "support",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "d262943b0749a094c3e48488bbd952b26f103adf",
+      "blob": "5eb99c63e76202d61a9f089ab4aa2d556dc1af0a",
+      "sha256": "fe358bfab67b850ddd386051cbeb73d929c7e700fd6d7b8cefe74849ba93ee10"
+    },
+    {
+      "path": "test/device/health.test.ts",
+      "scope": "core",
+      "batch": "support",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "d262943b0749a094c3e48488bbd952b26f103adf",
+      "blob": "09be8ef6c6d7ebcce1951d468fba3adfdf9bb289",
+      "sha256": "67ecfe2a7d40f812509cc649b6c6d92aa1795cfe10c8a2fa2d4d8cf07d9069f9"
+    },
+    {
+      "path": "test/device/registry.test.ts",
+      "scope": "core",
+      "batch": "support",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "d262943b0749a094c3e48488bbd952b26f103adf",
+      "blob": "1faca95b6dab69ba47a02b2234e4a586b22b26eb",
+      "sha256": "0805fc34a4b363d6f8883c6d0bb35a8a2fec1e132bc91f4fe56a193c06fe7e26"
+    },
+    {
+      "path": "test/device/state.test.ts",
+      "scope": "core",
+      "batch": "state",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "ade72e10f4ddd584067b080d1f78323fc93d3762",
+      "blob": "bc47c2e3fbf5f0ed48a10c549a80446923f25570",
+      "sha256": "1f389ce978f1192fa614edf53ae404b6c39cd722c3f59bf38fdd3d534554008d"
+    },
+    {
+      "path": "test/device/stateSeeds.ts",
+      "scope": "helper",
+      "batch": "state",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "ade72e10f4ddd584067b080d1f78323fc93d3762",
+      "blob": "bdf56c4ebaf3cd07b6c2c2a26c29181367aab1e6",
+      "sha256": "5137654a777ab56cc23fcee351defd63dff7ce53e960b84edf31b784f7aae57e"
+    },
+    {
+      "path": "test/device/waterLevel.test.ts",
+      "scope": "core",
+      "batch": "decoding",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "e8b99aa3c3ca42bedef002f16561fb7c93b524ee",
+      "blob": "0779fa5b95e088fcc8d3679c2012799274b72a5c",
+      "sha256": "a037fa411d2bb4694ad28b64cbf991f0ce16d57f5bfae827e958b95c60e42a51"
+    },
+    {
+      "path": "test/persistence/accessoryContext.test.ts",
+      "scope": "core",
+      "batch": "support",
+      "fullReview": true,
+      "headerInspected": true,
+      "revision": "d262943b0749a094c3e48488bbd952b26f103adf",
+      "blob": "29e6f9201214df9db5fcbf99a803b983f19bfed7",
+      "sha256": "16da06513aa30292f8e52617b4debbfc415496e53c89e46b82722ba314bb6d17"
+    }
+  ],
+  "acceptedFindingIds": [
+    "CR-03-STATE-001",
+    "CR-03-STATE-002",
+    "CR-03-STATE-003",
+    "CR-03-STATE-004",
+    "CR-03-STATE-005",
+    "CR-03-STATE-006",
+    "CR-03-STATE-007",
+    "CR-03-STATE-008",
+    "CR-03-STATE-009",
+    "CR-03-STATE-010",
+    "CR-03-STATE-011",
+    "CR-03-DECODING-001",
+    "CR-03-DECODING-002",
+    "CR-03-DECODING-003",
+    "CR-03-DECODING-004",
+    "CR-03-DECODING-005",
+    "CR-03-DECODING-006",
+    "CR-03-DECODING-007",
+    "CR-03-DECODING-008",
+    "CR-03-DECODING-009",
+    "CR-03-DECODING-010",
+    "CR-03-DECODING-011",
+    "CR-03-DECODING-012",
+    "CR-03-DECODING-013",
+    "CR-03-DECODING-014",
+    "CR-03-DECODING-015",
+    "CR-03-SUPPORT-001",
+    "CR-03-SUPPORT-002",
+    "CR-03-SUPPORT-003",
+    "CR-03-SUPPORT-004",
+    "CR-03-SUPPORT-005",
+    "CR-03-SUPPORT-006",
+    "CR-03-SUPPORT-007",
+    "CR-03-SUPPORT-008",
+    "CR-03-SUPPORT-009",
+    "CR-03-SUPPORT-010",
+    "CR-03-SUPPORT-011",
+    "CR-03-SUPPORT-012"
+  ],
+  "closedFindingIds": [
+    "CR-03-STATE-001",
+    "CR-03-STATE-002",
+    "CR-03-STATE-003",
+    "CR-03-STATE-004",
+    "CR-03-STATE-005",
+    "CR-03-STATE-006",
+    "CR-03-STATE-007",
+    "CR-03-STATE-008",
+    "CR-03-STATE-009",
+    "CR-03-STATE-010",
+    "CR-03-STATE-011",
+    "CR-03-DECODING-001",
+    "CR-03-DECODING-002",
+    "CR-03-DECODING-003",
+    "CR-03-DECODING-004",
+    "CR-03-DECODING-005",
+    "CR-03-DECODING-006",
+    "CR-03-DECODING-007",
+    "CR-03-DECODING-008",
+    "CR-03-DECODING-009",
+    "CR-03-DECODING-010",
+    "CR-03-DECODING-011",
+    "CR-03-DECODING-012",
+    "CR-03-DECODING-013",
+    "CR-03-DECODING-014",
+    "CR-03-DECODING-015",
+    "CR-03-SUPPORT-001",
+    "CR-03-SUPPORT-002",
+    "CR-03-SUPPORT-003",
+    "CR-03-SUPPORT-004",
+    "CR-03-SUPPORT-005",
+    "CR-03-SUPPORT-006",
+    "CR-03-SUPPORT-007",
+    "CR-03-SUPPORT-008",
+    "CR-03-SUPPORT-009",
+    "CR-03-SUPPORT-010",
+    "CR-03-SUPPORT-011",
+    "CR-03-SUPPORT-012"
+  ],
+  "openFindingIds": [],
+  "pendingStop": false,
+  "unresolvedHighThreatIds": [],
+  "batches": [
+    {
+      "name": "STATE",
+      "accepted": 11,
+      "report": ".planning/phases/03-device-and-persistence-conformance/03-STATE-REVIEW.md",
+      "finalRevision": "ade72e10f4ddd584067b080d1f78323fc93d3762",
+      "rounds": [
+        {
+          "round": 1,
+          "opening": 10,
+          "fixed": 10,
+          "rejected": 0,
+          "new": 1,
+          "reopened": 0,
+          "closing": 1
+        },
+        {
+          "round": 2,
+          "opening": 1,
+          "fixed": 1,
+          "rejected": 0,
+          "new": 0,
+          "reopened": 0,
+          "closing": 0
+        }
+      ]
+    },
+    {
+      "name": "DECODING",
+      "accepted": 15,
+      "report": ".planning/phases/03-device-and-persistence-conformance/03-DECODING-REVIEW.md",
+      "initial": 12,
+      "initialClarifications": 2,
+      "finalRevision": "e8b99aa3c3ca42bedef002f16561fb7c93b524ee",
+      "rounds": [
+        {
+          "round": 1,
+          "opening": 14,
+          "fixed": 14,
+          "rejected": 0,
+          "new": 1,
+          "reopened": 0,
+          "closing": 1
+        },
+        {
+          "round": 2,
+          "opening": 1,
+          "fixed": 1,
+          "rejected": 0,
+          "new": 0,
+          "reopened": 0,
+          "closing": 0
+        }
+      ]
+    },
+    {
+      "name": "SUPPORT",
+      "accepted": 12,
+      "report": ".planning/phases/03-device-and-persistence-conformance/03-SUPPORT-REVIEW.md",
+      "finalRevision": "d262943b0749a094c3e48488bbd952b26f103adf",
+      "rounds": [
+        {
+          "round": 1,
+          "opening": 10,
+          "fixed": 10,
+          "rejected": 0,
+          "new": 2,
+          "reopened": 0,
+          "closing": 2
+        },
+        {
+          "round": 2,
+          "opening": 2,
+          "fixed": 2,
+          "rejected": 0,
+          "new": 0,
+          "reopened": 0,
+          "closing": 0
+        }
+      ]
+    }
+  ],
+  "stateSeeds": [
+    {
+      "id": "STATE-W-01",
+      "category": "required undefined / optional shape",
+      "disposition": "rejected",
+      "findingIds": [],
+      "evidence": "ade72e10: source47-71, constructors206-214/263-271; complete required public/parser keys and exactOptionalPropertyTypes."
+    },
+    {
+      "id": "STATE-W-02",
+      "category": "snapshot readonly members",
+      "disposition": "rejected",
+      "findingIds": [],
+      "evidence": "ade72e10: interface33-52, freeze150-170; Classes readonly rule does not establish an interface violation; actual constructors/readers inspected."
+    },
+    {
+      "id": "STATE-W-03",
+      "category": "public and implementation JSDoc",
+      "disposition": "fixed",
+      "findingIds": [
+        "CR-03-STATE-004",
+        "CR-03-STATE-005"
+      ],
+      "evidence": "5808523/72417ab; ade72e10: public92-128, implementation360-400, header1-15."
+    },
+    {
+      "id": "STATE-W-04",
+      "category": "local telemetry naming",
+      "disposition": "fixed",
+      "findingIds": [
+        "CR-03-STATE-006"
+      ],
+      "evidence": "b3e792c; ade72e10: owner216-222 vendorTelemetry, canonical data retained."
+    },
+    {
+      "id": "STATE-W-05",
+      "category": "in-case rationale",
+      "disposition": "fixed",
+      "findingIds": [
+        "CR-03-STATE-007"
+      ],
+      "evidence": "1de1a61; ade72e10: owner455-458 removes obsolete narration; blanket deletion rejected and non-obvious setup retained."
+    },
+    {
+      "id": "STATE-W-06",
+      "category": "incomplete whole promises",
+      "disposition": "fixed",
+      "findingIds": [
+        "CR-03-STATE-001",
+        "CR-03-STATE-002",
+        "CR-03-STATE-003"
+      ],
+      "evidence": "ca8b3dd/169e4ed/3e4ba69/f78999a; independent whole returned/canonical/callback values and later clock, with scalar/silence promises preserved."
+    }
+  ],
+  "probes": {
+    "edges": {
+      "surfaced": 1,
+      "lifted": 0,
+      "flaggedAssumptions": 1,
+      "items": [
+        {
+          "id": "E-03-01",
+          "category": "unclassified",
+          "status": "unresolved",
+          "verification": null,
+          "resolution": null,
+          "reason": null,
+          "disposition": "flagged-assumption",
+          "humanNeeded": true
+        }
+      ]
+    },
+    "prohibitions": {
+      "surfaced": 2,
+      "authored": 2,
+      "omitted": 0,
+      "serializer": ".codex/gsd-core/bin/lib/probe-core.cjs projectProhibitions (existing planning projection)",
+      "items": [
+        {
+          "id": "P-03-01",
+          "status": "unresolved",
+          "verification": null,
+          "resolution": null,
+          "reason": null,
+          "disposition": "unverified",
+          "flagged": true,
+          "tier": null
+        },
+        {
+          "id": "P-03-02",
+          "status": "unresolved",
+          "verification": null,
+          "resolution": null,
+          "reason": null,
+          "disposition": "unverified",
+          "flagged": true,
+          "tier": null
+        }
+      ]
+    }
+  },
+  "fullGate": {
+    "command": "npm run check",
+    "exitCode": 0,
+    "revision": "629cfc4a35527c7faf098e0f9937c29775332c17",
+    "nodeVersion": "v26.11.1",
+    "npmVersion": "11.20.0",
+    "start": "2026-10-14T20:26:42.951916+00:00",
+    "end": "2026-10-14T20:27:18.476401+00:00",
+    "record": "/private/tmp/guardian-phase3-seal-full-gate.json",
+    "staticChecks": 6,
+    "cucumberScenarios": 104,
+    "cucumberSteps": 1156,
+    "isolatedPairs": 43,
+    "mergedLcov": "coverage/direct.lcov",
+    "inputEvidence": {
+      "atRun": {
+        "dirtyDiff": "",
+        "stagedDiff": "",
+        "untracked": {}
+      },
+      "laterOwnedRecordsOnly": true,
+      "comparison": "git diff 629cfc4a35527c7faf098e0f9937c29775332c17 -- . ':(exclude,glob).planning/**' must remain empty; .planning is outside hook executable-input regex and explicitly excluded from formatter. Exact planning diff/untracked bytes are retained by final native captures.",
+      "earlierWave7Comparison": "The Markdown-exclusion comparison against c5a1a276 showed only .planning/state.json updated_at; this is metadata outside executable inputs. A fresh gate replaced reuse."
+    }
+  },
+  "license": {
+    "command": "npm run build:test && node --test --test-reporter=tap dist-test/test/packaging/licenseHeaders.test.js",
+    "exitCode": 0,
+    "tests": 5,
+    "passed": 5,
+    "skipped": 0,
+    "cancelled": 0,
+    "record": "/private/tmp/guardian-phase3-seal-license.json",
+    "limit": "Source licensing gate does not replace the separately inspected 20 complete source/owner/helper headers."
+  },
+  "provenance": {
+    "genuineProductionBugs": 0,
+    "redEvidencePaths": [],
+    "nestedPriorEvidenceRecords": 0,
+    "classifierRuns": 0,
+    "applicability": "No accepted genuine behavior defect in complete reports; tracked/current/all-history Phase03 RED path inventories are empty; all nine emitted production outputs match pre-phase baseline. D-04 has no actual Phase03 bug chain to classify, and no artificial RED is created.",
+    "inventoryRecord": "/private/tmp/guardian-phase3-seal-inspection-facts.json",
+    "codeCommitCount": 47,
+    "codeCommits": [
+      {
+        "commit": "5808523c26899d15f8f0a4b0be7b147de6863d86",
+        "paths": [
+          "src/device/state.ts"
+        ]
+      },
+      {
+        "commit": "ca8b3ddf2fc9a79f2e6c1afa853e67d1f70db306",
+        "paths": [
+          ".planning/phases/03-device-and-persistence-conformance/03-STATE-REVIEW.md",
+          "test/device/state.test.ts"
+        ]
+      },
+      {
+        "commit": "169e4ed4a116d7b3986ba4cc6d0cb97debc72202",
+        "paths": [
+          "test/device/state.test.ts"
+        ]
+      },
+      {
+        "commit": "3e4ba69c38f7a883390494f147a7e8a71f377da6",
+        "paths": [
+          "test/device/state.test.ts"
+        ]
+      },
+      {
+        "commit": "f78999a1f58c9f0e8557ff04be5a5caee050ea35",
+        "paths": [
+          "test/device/state.test.ts"
+        ]
+      },
+      {
+        "commit": "72417aba9e365f4736e2a54b8a9c26656ef45ec0",
+        "paths": [
+          "src/device/state.ts"
+        ]
+      },
+      {
+        "commit": "b3e792c8a526403165357c963eb3864d32d2fcba",
+        "paths": [
+          "test/device/state.test.ts"
+        ]
+      },
+      {
+        "commit": "1de1a61d0bc894a8e9000c28d21c210a0704f2cf",
+        "paths": [
+          "test/device/state.test.ts"
+        ]
+      },
+      {
+        "commit": "18e8b83757f7aa1dcf38f8b61cb17ed116e48539",
+        "paths": [
+          "test/device/state.test.ts",
+          "test/device/stateSeeds.ts"
+        ]
+      },
+      {
+        "commit": "df9d37d03fc5f5b8b8e429af0f10b362628c792e",
+        "paths": [
+          "test/device/state.test.ts"
+        ]
+      },
+      {
+        "commit": "b05e58f75b82510537552109a80601ccf02b7b0c",
+        "paths": [
+          "test/device/state.test.ts"
+        ]
+      },
+      {
+        "commit": "90dac3919a7dc190ac29defc93b53d6ccd91379d",
+        "paths": [
+          "test/device/state.test.ts"
+        ]
+      },
+      {
+        "commit": "93284c763d81033641d90298494f9a58b2261d69",
+        "paths": [
+          "src/device/family.ts",
+          "test/device/family.test.ts"
+        ]
+      },
+      {
+        "commit": "7cbeed2d68dba91eb542d3c4a84b76736315bb79",
+        "paths": [
+          "src/device/family.ts"
+        ]
+      },
+      {
+        "commit": "3064645d40e8bb41f32ef86b3a19ad2792b90738",
+        "paths": [
+          "src/device/family.ts"
+        ]
+      },
+      {
+        "commit": "29ddff5ec7d642de54f05fe8c815dc88590976a6",
+        "paths": [
+          ".planning/phases/03-device-and-persistence-conformance/03-02-PLAN.md",
+          "src/device/family.ts"
+        ]
+      },
+      {
+        "commit": "b87c55ac489c13e0de7b6ee80911755d37e03edf",
+        "paths": [
+          "test/device/gemini.test.ts"
+        ]
+      },
+      {
+        "commit": "305ed865320e3a618ffab0c66bfa75c5c6d55479",
+        "paths": [
+          "src/device/gemini.ts",
+          "test/device/gemini.test.ts"
+        ]
+      },
+      {
+        "commit": "9ec326b0ab9a8962d69b7b9ffbb069e323e7e017",
+        "paths": [
+          "src/device/gemini.ts",
+          "test/device/gemini.test.ts"
+        ]
+      },
+      {
+        "commit": "a63a9eb01d9ea23941c85c2d1d1a1d6093b442d8",
+        "paths": [
+          "src/device/gemini.ts"
+        ]
+      },
+      {
+        "commit": "5555069b4ba1cee5a3ca64784a8e01cde28216ac",
+        "paths": [
+          "src/device/gemini.ts"
+        ]
+      },
+      {
+        "commit": "50b5d83542ae8a0f626355a3a8265faac49de137",
+        "paths": [
+          "test/device/gemini.test.ts"
+        ]
+      },
+      {
+        "commit": "35956f11424ea4ba2f4d143afba46cc87224974d",
+        "paths": [
+          "test/device/gemini.test.ts"
+        ]
+      },
+      {
+        "commit": "294f1c90350a95b9587ec6fdab3f9d052e5ce0f9",
+        "paths": [
+          "test/device/gemini.test.ts",
+          "test/device/geminiSeeds.ts"
+        ]
+      },
+      {
+        "commit": "e944df894677a1eae774a4295a0dc2863318cd2e",
+        "paths": [
+          "test/device/gemini.test.ts"
+        ]
+      },
+      {
+        "commit": "cd975d25a8f4a545a6a4f6a18794fb469c71fa09",
+        "paths": [
+          "test/device/gemini.test.ts"
+        ]
+      },
+      {
+        "commit": "5b4ada4c40f2004ce684700eebbbfbe303a11922",
+        "paths": [
+          "src/device/waterLevel.ts",
+          "test/device/waterLevel.test.ts"
+        ]
+      },
+      {
+        "commit": "7b8a83cf2cae0db41ae392ede8b6fb250c3e2865",
+        "paths": [
+          "test/device/waterLevel.test.ts"
+        ]
+      },
+      {
+        "commit": "4aeaef9bec74e924dbe5e305201530f2f2114e5d",
+        "paths": [
+          "test/device/waterLevel.test.ts"
+        ]
+      },
+      {
+        "commit": "93a425d4dd41ef062351ef9f8d0107ed75626e52",
+        "paths": [
+          "test/device/waterLevel.test.ts"
+        ]
+      },
+      {
+        "commit": "1e8b074c68b8f73ad122cae6d8d1d07d86c2e079",
+        "paths": [
+          "test/device/family.test.ts"
+        ]
+      },
+      {
+        "commit": "eca71a386c0d82c913d75e5144b4533547acb2ff",
+        "paths": [
+          "src/device/events.ts",
+          "test/device/events.test.ts"
+        ]
+      },
+      {
+        "commit": "7b72051a49671de6a62e5bd1a3f02104ff5c60a3",
+        "paths": [
+          "src/device/events.ts"
+        ]
+      },
+      {
+        "commit": "2c8f0ac0ae7033ac88c432ef35c87c8d70201e21",
+        "paths": [
+          "src/device/events.ts",
+          "test/device/events.test.ts"
+        ]
+      },
+      {
+        "commit": "a41e48153859f6a0cda23b727322d3eb9427f73e",
+        "paths": [
+          "test/device/events.test.ts"
+        ]
+      },
+      {
+        "commit": "95623884bb892b1a11097b65e52a67e88ea25315",
+        "paths": [
+          "src/device/health.ts",
+          "test/device/health.test.ts"
+        ]
+      },
+      {
+        "commit": "4deb91efab59f0059ab270f5dfc52d56aeba3eac",
+        "paths": [
+          "test/device/health.test.ts"
+        ]
+      },
+      {
+        "commit": "72c4574b9737d9b35e37e52296223f62d52acfee",
+        "paths": [
+          "src/device/halo.ts",
+          "test/device/halo.test.ts"
+        ]
+      },
+      {
+        "commit": "bb6d16593a14d72ebac2dd5f6b15aed6bc12a7df",
+        "paths": [
+          "test/device/halo.test.ts"
+        ]
+      },
+      {
+        "commit": "8847f1c195d23c5af24ab8d021d2f318a925a448",
+        "paths": [
+          "test/device/halo.test.ts"
+        ]
+      },
+      {
+        "commit": "7d79ac127dc7d8cc0062d8bf3e5bdc6689b208a7",
+        "paths": [
+          "src/device/registry.ts",
+          "test/device/registry.test.ts"
+        ]
+      },
+      {
+        "commit": "75f02e93913ac37ac376b4de7c290a375e391b62",
+        "paths": [
+          ".planning/phases/03-device-and-persistence-conformance/03-06-PLAN.md",
+          "src/device/registry.ts"
+        ]
+      },
+      {
+        "commit": "6ad32c3f112c9e9184264a498be26d1d666e6a72",
+        "paths": [
+          "test/device/registry.test.ts"
+        ]
+      },
+      {
+        "commit": "970119b2c79e4d119314a36c1dd94b7662e32af5",
+        "paths": [
+          "src/persistence/accessoryContext.ts",
+          "test/persistence/accessoryContext.test.ts"
+        ]
+      },
+      {
+        "commit": "d5c7ea6c65ab896f502629a10fa16340d47beb3c",
+        "paths": [
+          "test/persistence/accessoryContext.test.ts"
+        ]
+      },
+      {
+        "commit": "326b92418e3f33cb5d5d814de6f2a3692f5a202e",
+        "paths": [
+          "src/persistence/accessoryContext.ts"
+        ]
+      },
+      {
+        "commit": "d262943b0749a094c3e48488bbd952b26f103adf",
+        "paths": [
+          "src/persistence/accessoryContext.ts"
+        ]
+      }
+    ],
+    "unchangedRuntimeOutputs": [
+      {
+        "path": "src/device/events.ts",
+        "baseline": "aa826a50a0afeda9a95ab05d38240219bfcb5595",
+        "unchanged": true,
+        "emittedSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+      },
+      {
+        "path": "src/device/family.ts",
+        "baseline": "aa826a50a0afeda9a95ab05d38240219bfcb5595",
+        "unchanged": true,
+        "emittedSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+      },
+      {
+        "path": "src/device/gemini.ts",
+        "baseline": "aa826a50a0afeda9a95ab05d38240219bfcb5595",
+        "unchanged": true,
+        "emittedSha256": "65ed0ed1c0dfbc2b905e3c10284249c8ce0842f758c726047263dd42d7d50486"
+      },
+      {
+        "path": "src/device/halo.ts",
+        "baseline": "aa826a50a0afeda9a95ab05d38240219bfcb5595",
+        "unchanged": true,
+        "emittedSha256": "382a8732abc25b559ebe563f9540442ed5412c203f0e07117d8a39b10f2620d9"
+      },
+      {
+        "path": "src/device/health.ts",
+        "baseline": "aa826a50a0afeda9a95ab05d38240219bfcb5595",
+        "unchanged": true,
+        "emittedSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+      },
+      {
+        "path": "src/device/registry.ts",
+        "baseline": "aa826a50a0afeda9a95ab05d38240219bfcb5595",
+        "unchanged": true,
+        "emittedSha256": "24d58778ef1858db6fab65496d8a4f73d14aa44d5a1a3b304d8ea938f8b0de6e"
+      },
+      {
+        "path": "src/device/state.ts",
+        "baseline": "aa826a50a0afeda9a95ab05d38240219bfcb5595",
+        "unchanged": true,
+        "emittedSha256": "1ccd4c73ff88272ad7e109ec43f731a79cc0a9c21d1aed07e207cfcecf480b5f"
+      },
+      {
+        "path": "src/device/waterLevel.ts",
+        "baseline": "aa826a50a0afeda9a95ab05d38240219bfcb5595",
+        "unchanged": true,
+        "emittedSha256": "96ef7df40af7331575f30af05a82b375d1d9821d6d82202e2bbd28d54d5d2306"
+      },
+      {
+        "path": "src/persistence/accessoryContext.ts",
+        "baseline": "aa826a50a0afeda9a95ab05d38240219bfcb5595",
+        "unchanged": true,
+        "emittedSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+      }
+    ],
+    "controls": [
+      {
+        "record": "/private/tmp/state-tracer-evidence/canonical-control-owner.json",
+        "exitCode": 1,
+        "error": "ERR_ASSERTION",
+        "assertionProof": true,
+        "genuineBug": false
+      },
+      {
+        "record": "/private/tmp/state-tracer-evidence/envelope-control-owner.json",
+        "exitCode": 1,
+        "error": "ERR_ASSERTION",
+        "assertionProof": true,
+        "genuineBug": false
+      },
+      {
+        "record": "/private/tmp/state-expansion-003-control-owner.json",
+        "exitCode": 1,
+        "error": "ERR_ASSERTION",
+        "assertionProof": true,
+        "genuineBug": false
+      },
+      {
+        "record": "/private/tmp/gemini-007-control-validation-tap.json",
+        "exitCode": 1,
+        "error": "ERR_ASSERTION",
+        "assertionProof": true,
+        "genuineBug": false
+      },
+      {
+        "record": "/private/tmp/gemini-007-healthy-control-tap.json",
+        "exitCode": 1,
+        "error": "ERR_ASSERTION",
+        "assertionProof": true,
+        "genuineBug": false
+      },
+      {
+        "record": "/private/tmp/gemini-007-control-tap.json",
+        "exitCode": 1,
+        "error": "TypeError",
+        "assertionProof": false,
+        "genuineBug": false
+      }
+    ],
+    "restoration": "Actual saved sources match 5808523 STATE, b87c55a Gemini scope and cd975d25 Gemini healthy-control Git blobs. Native restored builds/owners remain in the reports; current fresh owners and full gate pass.",
+    "historicalGeminiCount": {
+      "reported": "247/247 lines, 30/30 functions, 85/85 branches",
+      "independentlyConfirmed": false,
+      "reason": "Matching historical raw native LCOV was not retained.",
+      "currentCompiledNative": {
+        "lines": "273/273",
+        "functions": "30/30",
+        "branches": "85/85"
+      },
+      "currentSourceMapped": {
+        "lines": "248/248",
+        "functions": "30/30",
+        "branches": "85/85"
+      },
+      "limit": "These current representations do not confirm or replace the historical 247-line count."
+    }
+  },
+  "externalConsumers": {
+    "editedPaths": [],
+    "status": "read-and-compatibility-validation-only",
+    "evidence": "Actual nonplanning Git diff is exactly 18 core paths plus stateSeeds/geminiSeeds. Exact caller/constructor and semantic results are retained in the three reports. Current full gate covers those unchanged consumer inputs.",
+    "groups": [
+      "cloud/shadow",
+      "runtime/accountRuntime",
+      "accessories/basementGuardian",
+      "accessories/pumpRecords",
+      "accessories/serviceCatalogue",
+      "platform",
+      "features/support/world.ts",
+      "features/support/steps/shadow.ts",
+      "features/real-pump/support/realWorld.ts"
+    ],
+    "limit": "No completed later-subsystem sweep or hardware/vendor behavior claim."
+  },
+  "threats": [
+    {
+      "id": "T-03-01",
+      "disposition": "mitigated-in-reviewed-scope",
+      "component": "state deep freeze",
+      "evidence": "Whole present nested values before freeze checks; STATE independent round 2 and current 52/52 owner.",
+      "limit": "Independent phase security verification remains parent-owned; no risk waiver or certification."
+    },
+    {
+      "id": "T-03-02",
+      "disposition": "mitigated-in-reviewed-scope",
+      "component": "canonical state and watermark",
+      "evidence": "Whole refused-patch canonical readbacks, monotonic behavior and three restored STATE controls.",
+      "limit": "Independent phase security verification remains parent-owned; no risk waiver or certification."
+    },
+    {
+      "id": "T-03-03",
+      "disposition": "mitigated-in-reviewed-scope",
+      "component": "listener error privacy",
+      "evidence": "Unchanged fixed safe log text; whole returned/stored state precedes exact log observations.",
+      "limit": "Independent phase security verification remains parent-owned; no risk waiver or certification."
+    },
+    {
+      "id": "T-03-04",
+      "disposition": "mitigated-in-reviewed-scope",
+      "component": "exhaustive scoped absence",
+      "evidence": "Family required keys, omitted-scope compiler negative and full invalid-water Gemini expectations.",
+      "limit": "Independent phase security verification remains parent-owned; no risk waiver or certification."
+    },
+    {
+      "id": "T-03-05",
+      "disposition": "mitigated-in-reviewed-scope",
+      "component": "reported/requested separation",
+      "evidence": "FamilyCommand desiredData contract and unchanged official command output.",
+      "limit": "Independent phase security verification remains parent-owned; no risk waiver or certification."
+    },
+    {
+      "id": "T-03-06",
+      "disposition": "mitigated-in-reviewed-scope",
+      "component": "Gemini narrow decoding",
+      "evidence": "Independent complete invalid-scope results; two intended assertion controls and unchanged guards.",
+      "limit": "Independent phase security verification remains parent-owned; no risk waiver or certification."
+    },
+    {
+      "id": "T-03-07",
+      "disposition": "mitigated-in-reviewed-scope",
+      "component": "device timestamps and age",
+      "evidence": "Separate recent/ancient full literals; required absent timestamps and unchanged numeric domains.",
+      "limit": "Independent phase security verification remains parent-owned; no risk waiver or certification."
+    },
+    {
+      "id": "T-03-08",
+      "disposition": "mitigated-in-reviewed-scope",
+      "component": "metadata and commands",
+      "evidence": "Actual firmware readers inspected; metadata absence stays separate from safety scope, commands exact.",
+      "limit": "Independent phase security verification remains parent-owned; no risk waiver or certification."
+    },
+    {
+      "id": "T-03-09",
+      "disposition": "mitigated-in-reviewed-scope",
+      "component": "provisional water mapping",
+      "evidence": "Independent complete 0/1/3/7/15/31 map; real legal31/illegal2 decoder probes; G-002 remains outside.",
+      "limit": "Independent phase security verification remains parent-owned; no risk waiver or certification."
+    },
+    {
+      "id": "T-03-10",
+      "disposition": "mitigated-in-reviewed-scope",
+      "component": "event identities and clocks",
+      "evidence": "Union positives, required-discriminant omissions and separate local-ms/device-second compiler contracts.",
+      "limit": "Independent phase security verification remains parent-owned; no risk waiver or certification."
+    },
+    {
+      "id": "T-03-11",
+      "disposition": "mitigated-in-reviewed-scope",
+      "component": "narrow health trust",
+      "evidence": "Required-absence and readonly-list contracts; actual serviceCatalogue 185/185 compatibility evidence.",
+      "limit": "Independent phase security verification remains parent-owned; no risk waiver or certification."
+    },
+    {
+      "id": "T-03-12",
+      "disposition": "mitigated-in-reviewed-scope",
+      "component": "registry identity and outcomes",
+      "evidence": "Independent complete unsupported HALO result, actual Gemini binding, deviceId UUID consumer read.",
+      "limit": "Independent phase security verification remains parent-owned; no risk waiver or certification."
+    },
+    {
+      "id": "T-03-13",
+      "disposition": "mitigated-in-reviewed-scope",
+      "component": "registry explanation cadence",
+      "evidence": "Current registry 8/8 owner and exact repeat/change/other-device scalar observations.",
+      "limit": "Independent phase security verification remains parent-owned; no risk waiver or certification."
+    },
+    {
+      "id": "T-03-14",
+      "disposition": "mitigated-in-reviewed-scope",
+      "component": "mutable observations and recovery",
+      "evidence": "Writable compiler assignments; actual pumpRecords 33/33 and two platform persistence cases.",
+      "limit": "Independent phase security verification remains parent-owned; no risk waiver or certification."
+    },
+    {
+      "id": "T-03-15",
+      "disposition": "mitigated-in-reviewed-scope",
+      "component": "context and artifact privacy",
+      "evidence": "No new runtime surface; credential/raw-response exclusion; existing deviceId treatment and opaque-key limit explicit.",
+      "limit": "Independent phase security verification remains parent-owned; no risk waiver or certification."
+    },
+    {
+      "id": "T-03-16",
+      "disposition": "mitigated-in-reviewed-scope",
+      "component": "evidence integrity",
+      "evidence": "38 IDs/continuous rounds, actual 47 code commit paths, 20 equal reviewed blobs, no genuine RED inventory, restored controls.",
+      "limit": "Independent phase security verification remains parent-owned; no risk waiver or certification."
+    },
+    {
+      "id": "T-03-17",
+      "disposition": "mitigated-in-reviewed-scope",
+      "component": "sanitized evidence",
+      "evidence": "Synthetic report/capture inputs and ordinary enabled secret hooks; no private account material.",
+      "limit": "Independent phase security verification remains parent-owned; no risk waiver or certification."
+    },
+    {
+      "id": "T-03-SC",
+      "disposition": "mitigated-in-reviewed-scope",
+      "component": "package installation",
+      "evidence": "No dependency/install/tool change; current package manifests unchanged from the reviewed baseline.",
+      "limit": "Independent phase security verification remains parent-owned; no risk waiver or certification."
+    }
+  ],
+  "processDeviations": [
+    {
+      "windowsId": 46,
+      "status": "open",
+      "waived": false,
+      "findingId": "CR-03-STATE-008",
+      "description": "Formatter-changing pre-step exit1 preceded ordinary passing commit18e8b83 without clean repeat first; later exact-byte exit0 does not retroactively satisfy ordering."
+    },
+    {
+      "windowsId": 47,
+      "status": "open",
+      "waived": false,
+      "findingId": "CR-03-DECODING-005",
+      "description": "Private alias removed at a63a9eb without required alias-specific pre-edit Fallow trace. Full read/rg/public probes/equivalence do not supply that missing historical proof."
+    }
+  ],
+  "independentAggregateReview": {
+    "status": "pass",
+    "reviewerRole": "gsd-code-reviewer",
+    "reviewer": "/root/phase3_seal_audit/seal_evidence_reviewer",
+    "scope": "Read-only artifact/native/Git evidence audit; not a new whole-source correction round or counter reset.",
+    "observedOutcome": "Named terminal PASS: no concrete artifact correction or D-03 stop; all20 reviewed blobs/headers,47 introducing commit budgets,38 accepted IDs, native controls/restoration/current LCOV/full gate independently confirmed. Exact 90,285-byte reviewed dirty diff matched its native capture.",
+    "writes": false,
+    "resourcesReleased": true,
+    "retainedLimits": [
+      "WINDOWS46/47 open/unwaived",
+      "Historical Gemini247/247 independently unconfirmed",
+      "E/P judgments and parent security/Nyquist/phase verification pending",
+      "Hardware and release gates outside scope"
+    ]
+  },
+  "requirementStatus": "pending-phase-verification",
+  "phaseStatus": "pending-parent-verification-and-human-judgments",
+  "humanJudgments": [
+    {
+      "id": "E-03-01",
+      "status": "human_needed",
+      "judgment": "Accept the concrete complete-file review/test boundary while retaining the unclassified taxonomy assumption?",
+      "limits": "No exhaustive taxonomy or deterministic classification."
+    },
+    {
+      "id": "P-03-01",
+      "status": "human_needed",
+      "judgment": "Confirm that this bounded conformance work preserves absent/untrustworthy telemetry without guessed normal conditions?",
+      "evidence": "Nine unchanged emitted source outputs; whole invalid-scope and canonical observations; current offline gates.",
+      "limits": "No new vendor meaning, hardware proof, provisional water/battery validation or resolution of the opaque-key assumption."
+    },
+    {
+      "id": "P-03-02",
+      "status": "human_needed",
+      "judgment": "Confirm the truthful boundary of 18 core+2 helpers, 38 closed findings, zero genuine bugs, five successful controls, one unsuccessful control and current gates?",
+      "limits": "WINDOWS46/47 remain open/unwaived; historical247 remains unconfirmed; later subsystems, security/phase verification, hardware/release and shared advancement remain parent-owned."
+    }
+  ],
+  "threatFlags": []
+}

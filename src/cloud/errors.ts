@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Defines structured cloud request and authentication errors.
+ */
+
 /**
  * A vendor REST call that did not produce usable data.
  *

@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Checks family contracts through valid shapes and compiler errors.
+ */
+
 import type {
   AlarmMuteState,
   BatteryState,
@@ -8,6 +18,7 @@ import type {
   FamilyCommand,
   FamilyValidation,
   FaultState,
+  FieldScope,
   FieldViolation,
   FieldViolationReason,
   PowerState,
@@ -35,9 +46,10 @@ const geminiAdapter = {
 
 void ('self-test' satisfies DeviceCapability);
 void ('out-of-domain' satisfies FieldViolationReason);
+void ('metadata' satisfies FieldScope);
 void ({ field: 'water_level', reason: 'out-of-domain', scope: 'water' } satisfies FieldViolation);
 void ({ field: 'test_running', reason: 'wrong-type', scope: 'self-test' } satisfies FieldViolation);
-void ({ field: 'mcu_firmware_version', reason: 'wrong-type', scope: undefined } satisfies FieldViolation);
+void ({ field: 'mcu_firmware_version', reason: 'wrong-type', scope: 'metadata' } satisfies FieldViolation);
 void ({ valid: true } satisfies FamilyValidation);
 void ({ valid: false, violations: [{ field: 'water_level', reason: 'missing', scope: 'water' }] } satisfies FamilyValidation);
 void ({ desiredData: { test_running: true } } satisfies FamilyCommand);
@@ -72,7 +84,8 @@ void ({
   metadata: { mcuFirmwareVersion: '1.2.3', wifiFirmwareVersion: '4.5.6', mcuTargetVersion: '1.3.0', wifiSignalDbm: -60 },
 } satisfies ScopedDomainState);
 
-// Only the scope that lost its link is absent; the rest keep publishing current values.
+// Every required group is present even when its value is undefined.
+// Connectivity can remain available while all other groups are absent.
 void ({
   water: undefined,
   pump: undefined,
