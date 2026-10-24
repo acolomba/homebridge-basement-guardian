@@ -403,6 +403,41 @@ export function registerDiscoveredDevices(context: DiscoveryContext, deviceIds: 
   }
 }
 
+// The fallback for an accessory whose trust publication threw. That accessory
+// still reports the trust it last published, which may vouch for readings this
+// push could not confirm, so `Status Active` is withdrawn on every service that
+// carries it. The services stay readable, and the next publication that
+// succeeds republishes the trust, so the fallback clears itself.
+//
+// It answers whether every service was marked, so the caller does not claim a
+// withdrawal that did not happen.
+function withdrawAccessoryTrust(context: DiscoveryContext, uuid: string): boolean {
+  const accessory = context.accessories.get(uuid);
+
+  if (accessory === undefined) {
+    return false;
+  }
+
+  return markRestoredServicesStale(accessory, context.api.hap).failed === 0;
+}
+
+// Publishes one accessory's trust, so a throw costs that accessory alone. The
+// error travels as a parameter so the redacting logger describes it rather
+// than a message built here (D-024).
+function publishAccessoryTrust(context: DiscoveryContext, uuid: string, basementGuardianAccessory: BasementGuardianAccessory, trust: MonitoringTrust): void {
+  try {
+    basementGuardianAccessory.markMonitoring(trust);
+  } catch (error: unknown) {
+    const deviceId = basementGuardianAccessory.deviceId;
+
+    if (withdrawAccessoryTrust(context, uuid)) {
+      context.log.error(`Unable to publish monitoring trust for ${deviceId}. Its services no longer vouch for their readings.`, error);
+    } else {
+      context.log.error(`Unable to publish monitoring trust for ${deviceId}, or to withdraw the trust it already reports.`, error);
+    }
+  }
+}
+
 /**
  * Applies the monitoring trust to every accessory this plugin run publishes:
  * the account's own answer where the fact is account-wide, and this system's
@@ -421,7 +456,7 @@ export function registerDiscoveredDevices(context: DiscoveryContext, deviceIds: 
  * assert against the copy rather than against what a bridge runs (D-12).
  */
 export function applyMonitoringHealth(context: DiscoveryContext, account: MonitoringTrust, byDevice: ReadonlyMap<string, MonitoringTrust>): void {
-  for (const basementGuardianAccessory of context.basementGuardianAccessories.values()) {
+  for (const [uuid, basementGuardianAccessory] of context.basementGuardianAccessories) {
     // The join is on the accessory's own `deviceId`. `byDevice` is keyed by
     // `deviceId` while `basementGuardianAccessories` is keyed by the UUID that
     // `deviceId` seeds, so a lookup on this map's own key would silently match
@@ -436,11 +471,7 @@ export function applyMonitoringHealth(context: DiscoveryContext, account: Monito
     // supplied and `markMonitoring` compares all four (D-02).
     const trust = byDevice.get(basementGuardianAccessory.deviceId) ?? { ...account, shadowSilent: true };
 
-    try {
-      basementGuardianAccessory.markMonitoring(trust);
-    } catch {
-      context.log.error('Unable to publish monitoring trust for an accessory.');
-    }
+    publishAccessoryTrust(context, uuid, basementGuardianAccessory, trust);
   }
 
   if (!account.credentialsRejected) {

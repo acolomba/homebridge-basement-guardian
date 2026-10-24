@@ -1841,6 +1841,80 @@ describe('applyMonitoringHealth', () => {
     verify(api);
   });
 
+  test('withdraws trust from the services of an accessory whose trust publication throws, and names its device', async () => {
+    // arrange
+    const heard = new Map<string, MonitoringTrust>();
+    const messages: string[] = [];
+    const restored = restoredAccessories();
+    const account = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false } satisfies MonitoringTrust;
+    const api = fakeDiscoveryApi([]);
+    when(() => api.hap).thenReturn(HAP_NAMESPACE);
+    const context = discoveryContext({
+      api,
+      accessories: restored.accessories,
+      registry: unknownRegistry(),
+      log: createRecordingLog(messages),
+      basementGuardianAccessories: new Map<string, BasementGuardianAccessory>([
+        [
+          ACCESSORY_UUID,
+          {
+            ...recordingBasementGuardianAccessory(DEVICE_ID, []),
+            markMonitoring: () => {
+              throw new Error('synthetic trust publication failure');
+            },
+          },
+        ],
+        [SECOND_ACCESSORY_UUID, trustRecordingBasementGuardianAccessory(SECOND_DEVICE_ID, heard)],
+      ]),
+    });
+
+    // act
+    applyMonitoringHealth(context, account, new Map<string, MonitoringTrust>([[SECOND_DEVICE_ID, account]]));
+
+    // assert
+    assert.deepStrictEqual(
+      { heard, reads: await trustReadsOf(restored.floods), messages },
+      {
+        heard: new Map<string, MonitoringTrust>([[SECOND_DEVICE_ID, account]]),
+        reads: [
+          { statusActive: { value: false, threw: undefined }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
+          { statusActive: { value: true, threw: undefined }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
+        ],
+        messages: [`Unable to publish monitoring trust for ${DEVICE_ID}. Its services no longer vouch for their readings.`],
+      },
+    );
+    verify(api);
+  });
+
+  test('claims no withdrawal for a throwing accessory the platform holds no services for', () => {
+    // arrange
+    const messages: string[] = [];
+    const account = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false } satisfies MonitoringTrust;
+    const context = discoveryContext({
+      api: fakeDiscoveryApi([]),
+      accessories: new Map<string, BasementGuardianPlatformAccessory>(),
+      registry: unknownRegistry(),
+      log: createRecordingLog(messages),
+      basementGuardianAccessories: new Map<string, BasementGuardianAccessory>([
+        [
+          ACCESSORY_UUID,
+          {
+            ...recordingBasementGuardianAccessory(DEVICE_ID, []),
+            markMonitoring: () => {
+              throw new Error('synthetic trust publication failure');
+            },
+          },
+        ],
+      ]),
+    });
+
+    // act
+    applyMonitoringHealth(context, account, new Map<string, MonitoringTrust>([[DEVICE_ID, account]]));
+
+    // assert
+    assert.deepStrictEqual(messages, [`Unable to publish monitoring trust for ${DEVICE_ID}, or to withdraw the trust it already reports.`]);
+  });
+
   test('continues trust updates and cached marking when one accessory fails', async (t: TestContext) => {
     // arrange
     const heard = new Map<string, MonitoringTrust>();
@@ -1855,7 +1929,7 @@ describe('applyMonitoringHealth', () => {
     const api = fakeDiscoveryApi([]);
     when(() => api.hap)
       .thenReturn(HAP_NAMESPACE)
-      .times(2);
+      .times(3);
     const context = discoveryContext({
       api,
       accessories: restored.accessories,
@@ -1887,7 +1961,10 @@ describe('applyMonitoringHealth', () => {
           { statusActive: { value: true, threw: undefined }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
           { statusActive: { value: true, threw: COMMUNICATION_FAILURE }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
         ],
-        messages: ['Unable to publish monitoring trust for an accessory.', 'Unable to mark cached monitoring trust unreadable.'],
+        messages: [
+          `Unable to publish monitoring trust for ${DEVICE_ID}, or to withdraw the trust it already reports.`,
+          'Unable to mark cached monitoring trust unreadable.',
+        ],
       },
     );
     verify(api);
