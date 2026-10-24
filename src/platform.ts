@@ -359,9 +359,16 @@ function dispatchDiscoveredDevice(context: DiscoveryContext, deviceId: string, s
 
   try {
     context.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-  } catch {
+  } catch (error: unknown) {
     uncertain.add(uuid);
-    context.log.error('Accessory registration outcome is uncertain. Restart Homebridge before this device can be registered again.');
+    // The line names the error class and never its message: a registration
+    // failure can carry text the redacting logger has no secret for (D-024).
+    // Homebridge throws only `Error` instances, so the catch assumes one.
+    const errorClass = (error as Error).constructor.name;
+    context.log.error(
+      `Accessory registration outcome for ${deviceId} is uncertain because registration threw ${errorClass}. ` +
+        'Restart Homebridge before this device can be registered again.',
+    );
 
     return;
   }

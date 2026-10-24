@@ -2442,6 +2442,12 @@ describe('applyMonitoringHealth', () => {
   }
 });
 
+// The one diagnostic an uncertain registration logs: the device and the error class, and never the
+// error message, which may carry text no registered secret covers.
+const UNCERTAIN_REGISTRATION =
+  `Accessory registration outcome for ${DEVICE_ID} is uncertain because registration threw Error. ` +
+  'Restart Homebridge before this device can be registered again.';
+
 describe('registerDiscoveredDevices', () => {
   for (const { location, accept, acceptedUuids } of [
     { location: 'before acceptance', accept: () => undefined, acceptedUuids: [] },
@@ -2477,7 +2483,7 @@ describe('registerDiscoveredDevices', () => {
       });
       log.registerSecret('token-private');
       when(() => {
-        diagnostic.error('Accessory registration outcome is uncertain. Restart Homebridge before this device can be registered again.');
+        diagnostic.error(UNCERTAIN_REGISTRATION);
       }).thenReturn(undefined);
       when(() => {
         registration.registerPlatformAccessories(
@@ -2640,7 +2646,7 @@ describe('registerDiscoveredDevices', () => {
         { plugin: PLUGIN_NAME, platform: PLATFORM_NAME, uuids: [ACCESSORY_UUID], cached: [false], listeners: [] },
         { plugin: PLUGIN_NAME, platform: PLATFORM_NAME, uuids: [SECOND_ACCESSORY_UUID], cached: [false], listeners: [] },
       ]);
-      assert.deepStrictEqual(diagnostics, [['Accessory registration outcome is uncertain. Restart Homebridge before this device can be registered again.']]);
+      assert.deepStrictEqual(diagnostics, [[UNCERTAIN_REGISTRATION]]);
       verify(registration);
       verify(removal);
       verify(diagnostic);
