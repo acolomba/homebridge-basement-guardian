@@ -333,7 +333,7 @@ Feature: Monitoring degradation
       | water_level | 3 |
     Then the canonical snapshot carries these fields:
       | water_level | 3 |
-    When the vendor service starts failing every request with status 503
+    When the vendor starts failing every request with status 503
     Then the "Basement Guardian Offline" service reports "Status Active" as "false"
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
     Then the "Basement Guardian Offline" sensor is not activated
@@ -348,7 +348,7 @@ Feature: Monitoring degradation
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
-    When the vendor service starts failing every request with status 503
+    When the vendor starts failing every request with status 503
     When the scenario clock moves forward by 1796 seconds
     Then the "Sump Pit Flood" service reports "Status Active" as "false"
     Then the "Basement Guardian Offline" service reports "Status Active" as "false"
@@ -372,7 +372,7 @@ Feature: Monitoring degradation
       | serial_communications | false |
     Then the "Pump Controller Link Lost" sensor is activated
     Then the "Pump Controller Link Lost" service reports "Status Active" as "true"
-    When the vendor service starts failing every request with status 503
+    When the vendor starts failing every request with status 503
     When the scenario clock moves forward by 1796 seconds
     Then the "Pump Controller Link Lost" service reports "Status Active" as "false"
     Then the "Pump Controller Link Lost" sensor is activated
@@ -482,7 +482,7 @@ Feature: Monitoring degradation
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
-    When the vendor service starts failing every request with status 503
+    When the vendor starts failing every request with status 503
     When the plugin restarts
     Then the "Sump Pit Flood" service reports "Status Active" as "false"
     Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
@@ -497,7 +497,7 @@ Feature: Monitoring degradation
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the "Sump Pit Level" service reports "Water Level" as "20"
-    When the vendor service starts failing every request with status 503
+    When the vendor starts failing every request with status 503
     When the plugin restarts
     Then the "Sump Pit Level" service reports "Status Active" as "false"
     Then the "Sump Pit Level" service reports "Water Level" as "20"
@@ -515,7 +515,7 @@ Feature: Monitoring degradation
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the plugin publishes the "System Self-Test" service
-    When the vendor service starts failing every request with status 503
+    When the vendor starts failing every request with status 503
     When the plugin restarts
     When a controller presses the "System Self-Test" switch
     Then the write reports that the control is not allowed now
