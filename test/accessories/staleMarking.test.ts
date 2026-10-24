@@ -11,15 +11,15 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import { createFakeHap } from '../../features/lib/hap.js';
-import { HarnessPlatformAccessory } from '../../features/lib/homebridgeApi.js';
+import { asHapNamespace, asService, createFakeHap } from '../../features/lib/hap.js';
+import { asPlatformAccessory, HarnessPlatformAccessory } from '../../features/lib/homebridgeApi.js';
 import { createControlBinder } from '../../src/accessories/controls.js';
 import { markRestoredServicesStale, markTrustReportsUnreadable, refuseRestoredControls } from '../../src/accessories/staleMarking.js';
 
 import type { FakeCharacteristicClass, FakeHapService } from '../../features/lib/hap.js';
 import type { DeviceCapability } from '../../src/device/family.js';
 import type { Timers } from '../../src/runtime/timers.js';
-import type { API, Logging, PlatformAccessory, Service } from 'homebridge';
+import type { Logging } from 'homebridge';
 
 const ACCESSORY_UUID = 'placeholder-accessory-uuid';
 
@@ -43,22 +43,8 @@ const DEVICE_ID = 'account-1_serial-1';
 // builds its own accessory, and a characteristic lives on the service that carries it.
 const HAP = createFakeHap();
 
-// The widenings, kept in one place. Each stand-in carries only part of the real type, so no
-// structural type admits it; the widening is what lets it stand where the code under test takes the
-// real type.
-//
-// The stand-in namespace stands where the passes and the binder take the injected HAP namespace.
-const HAP_NAMESPACE = HAP as unknown as API['hap'];
-
-// The stand-in accessory stands where a pass takes a restored PlatformAccessory.
-function asPlatformAccessory(accessory: HarnessPlatformAccessory): PlatformAccessory {
-  return accessory as unknown as PlatformAccessory;
-}
-
-// The stand-in service stands where the binder takes a Service.
-function asService(service: FakeHapService): Service {
-  return service as unknown as Service;
-}
+// The namespace stand-in, widened where the passes and the binder take the injected HAP namespace.
+const HAP_NAMESPACE = asHapNamespace(HAP);
 
 // A restored accessory carries plain services holding the values the previous
 // run published, which is what `restoreCachedAccessories` rebuilds and what a

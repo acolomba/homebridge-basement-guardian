@@ -33,7 +33,7 @@ import { applyMonitoringHealth, BasementGuardianPlatform, registerDiscoveredDevi
 import { createAccountRuntimeFromConfig } from '../../src/runtime/accountRuntime.js';
 import { PLATFORM_NAME } from '../../src/settings.js';
 import { createFakeAuth0 } from '../lib/auth0.js';
-import { createFakeHomebridgeApi } from '../lib/homebridgeApi.js';
+import { asPlatformAccessory, createFakeHomebridgeApi } from '../lib/homebridgeApi.js';
 import { ScenarioMemory } from '../lib/scenarioMemory.js';
 import { createFakeShadowBroker } from '../lib/shadowBroker.js';
 import { createFakeTimers } from '../lib/timers.js';
@@ -641,12 +641,12 @@ export class BasementGuardianWorld extends World {
   // is a deferral a scenario runs by moving its own clock.
   //
   // The accessory stand-in answers the members the plugin reads and no structural type expresses
-  // that, which is the same seam the widened `api` member documents.
+  // that; `asPlatformAccessory` is the one place it is widened to the real type.
   private restoredAccessories(homebridge: FakeHomebridgeApi): Map<string, BasementGuardianPlatformAccessory> {
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
 
     for (const accessory of homebridge.restoreCachedAccessories()) {
-      const restored = accessory as unknown as BasementGuardianPlatformAccessory;
+      const restored = asPlatformAccessory(accessory);
 
       markRestoredServicesStale(restored, homebridge.api.hap);
       refuseRestoredControls(restored, homebridge.api.hap, this.logger(), this.timers);

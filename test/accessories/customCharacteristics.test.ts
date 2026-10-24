@@ -11,7 +11,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { createFakeHap } from '../../features/lib/hap.js';
+import { asHapNamespace, createFakeHap } from '../../features/lib/hap.js';
 import { createCustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
 
 import type { FakeCharacteristicProps, FakeHap } from '../../features/lib/hap.js';
@@ -194,9 +194,6 @@ const CHARACTERISTICS: readonly CharacteristicExpectation[] = [
   },
 ];
 
-// The stand-in answers the members the plugin reads and nothing else, which no structural type can
-// express; the widening is what lets it stand where the plugin takes the real namespace.
-//
 // The stand-in's base characteristic starts every value at its format default, but the real HAP
 // base leaves `value` null, and each definition assigns its own default. So this namespace swaps
 // in a base that leaves `value` null, as the real one does. A vendor characteristic that does not
@@ -214,7 +211,7 @@ function hapNamespace(): API['hap'] {
 
   const namespace: FakeHap = { ...standIn, Characteristic: NullValueCharacteristic };
 
-  return namespace as unknown as API['hap'];
+  return asHapNamespace(namespace);
 }
 
 // The declared set as a plain lookup, so a characteristic is found by the key it is published under

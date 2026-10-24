@@ -25,10 +25,9 @@ import { Then } from '@cucumber/cucumber';
 import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
 import { currentAccessory, pushedValue, serviceOf, serviceOnNamed } from '../lib/publishedServices.js';
 
-import type { FakeHapCharacteristic, FakeHapService, FakeServiceClass } from '../lib/hap.js';
+import type { FakeHapCharacteristic, FakeHapService } from '../lib/hap.js';
 import type { FakeHomebridgeApi } from '../lib/homebridgeApi.js';
 import type { BasementGuardianWorld } from '../support/world.js';
-import type { API } from 'homebridge';
 
 // A published value appears only once a poll has applied the vendor state a step just set, so every
 // read carries a deadline that turns a poll which never ran into a named failure.
@@ -125,9 +124,7 @@ function publishedServiceCount(homebridge: FakeHomebridgeApi): number {
     return 0;
   }
 
-  return createServiceCatalogue(homebridge.hap as unknown as API['hap']).filter(
-    (row) => accessory.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype) !== undefined,
-  ).length;
+  return createServiceCatalogue(homebridge.api.hap).filter((row) => accessory.getServiceById(row.serviceClass, row.subtype) !== undefined).length;
 }
 
 Then(

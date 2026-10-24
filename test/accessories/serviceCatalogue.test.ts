@@ -13,8 +13,8 @@ import { readFile } from 'node:fs/promises';
 import { describe, test } from 'node:test';
 import { isDeepStrictEqual } from 'node:util';
 
-import { createFakeHap } from '../../features/lib/hap.js';
-import { createFakeAccessory } from '../../features/lib/homebridgeApi.js';
+import { asHapNamespace, createFakeHap } from '../../features/lib/hap.js';
+import { asPlatformAccessory, createFakeAccessory } from '../../features/lib/homebridgeApi.js';
 import { createCustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
 import { createCustomServices } from '../../src/accessories/customServices.js';
 import {
@@ -205,14 +205,13 @@ void ({
 // @ts-expect-error a projection reads the offline confirmation the accessory counted
 void ({ decoded: {}, untrustedScopes: [], controllerDataLastTrustedAt: '', pendingControls: new Set<DeviceCapability>() } satisfies ProjectionInput);
 
-// The stand-ins answer the members the plugin reads and nothing else, which no structural type can
-// express; the widening is what lets each stand where the plugin takes the real object.
+// The stand-ins, widened where the plugin takes the real namespace and accessory.
 function hapNamespace(): API['hap'] {
-  return createFakeHap() as unknown as API['hap'];
+  return asHapNamespace(createFakeHap());
 }
 
 function accessoryStandIn(): PlatformAccessory {
-  return createFakeAccessory(ACCESSORY_NAME, ACCESSORY_UUID) as unknown as PlatformAccessory;
+  return asPlatformAccessory(createFakeAccessory(ACCESSORY_NAME, ACCESSORY_UUID));
 }
 
 // One decoded battery group, carrying both the exact vendor codes and the two values the family

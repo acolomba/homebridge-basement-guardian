@@ -11,7 +11,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { createFakeHap } from '../../features/lib/hap.js';
+import { asHapNamespace, createFakeHap } from '../../features/lib/hap.js';
 import { createCustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
 import { createCustomServices } from '../../src/accessories/customServices.js';
 
@@ -110,10 +110,9 @@ const SERVICES: readonly ServiceExpectation[] = [
   },
 ];
 
-// The stand-in answers the members the plugin reads and nothing else, which no structural type can
-// express; the widening is what lets it stand where the plugin takes the real namespace.
+// The namespace stand-in, widened where the plugin takes the real namespace.
 function hapNamespace(): API['hap'] {
-  return createFakeHap() as unknown as API['hap'];
+  return asHapNamespace(createFakeHap());
 }
 
 /** A characteristic, as far as the name a controller shows it by. */

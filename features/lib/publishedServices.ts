@@ -16,10 +16,9 @@
 
 import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
 
-import type { FakeHapCharacteristic, FakeHapService, FakeServiceClass } from './hap.js';
+import type { FakeHapCharacteristic, FakeHapService } from './hap.js';
 import type { FakeAccessory, FakeHomebridgeApi } from './homebridgeApi.js';
 import type { ServiceRow } from '../../src/accessories/serviceCatalogue.js';
-import type { API } from 'homebridge';
 
 /**
  * The accessory a scenario's plugin is publishing onto now.
@@ -67,7 +66,7 @@ function accessoryNamed(homebridge: FakeHomebridgeApi, accessoryName: string): F
 // nowhere else, so both resolutions below read the row from here rather than restating any of the
 // three (D-12).
 function catalogueRow(homebridge: FakeHomebridgeApi, displayName: string): ServiceRow {
-  const row = createServiceCatalogue(homebridge.hap as unknown as API['hap']).find((candidate) => candidate.displayName === displayName);
+  const row = createServiceCatalogue(homebridge.api.hap).find((candidate) => candidate.displayName === displayName);
 
   if (row === undefined) {
     throw new Error(`the plugin publishes no ${displayName} service`);
@@ -76,10 +75,10 @@ function catalogueRow(homebridge: FakeHomebridgeApi, displayName: string): Servi
   return row;
 }
 
-// The catalogue declares its service classes against the real HAP types while the accessory stand-in
-// answers its own; the class is one runtime object, so the lookup needs the other view.
+// The catalogue declares its service classes against the real HAP types; the accessory stand-in
+// looks a service up by the class identifier alone, which both kinds of class carry.
 function serviceOn(accessory: FakeAccessory | undefined, row: ServiceRow): FakeHapService | undefined {
-  return accessory?.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype);
+  return accessory?.getServiceById(row.serviceClass, row.subtype);
 }
 
 /** Answers the service the catalogue publishes a named row on, or `undefined` when it is absent. */

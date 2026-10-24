@@ -19,11 +19,10 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
 import { currentAccessory, pushedValue } from '../lib/publishedServices.js';
 
-import type { FakeHapCharacteristic, FakeServiceClass } from '../lib/hap.js';
+import type { FakeHapCharacteristic } from '../lib/hap.js';
 import type { FakeHomebridgeApi } from '../lib/homebridgeApi.js';
 import type { FakeRestApi } from '../lib/vendorRestApi.js';
 import type { BasementGuardianWorld } from '../support/world.js';
-import type { API } from 'homebridge';
 
 const CREDENTIALS_PATH = '/credentials/aws';
 const DEVICES_PATH = '/devices';
@@ -164,8 +163,8 @@ function publishedTrustReports(homebridge: FakeHomebridgeApi): readonly { servic
   }
 
   const statusActiveUuid = homebridge.hap.Characteristic.StatusActive.UUID;
-  const reports = createServiceCatalogue(homebridge.hap as unknown as API['hap']).flatMap((row) => {
-    const service = accessory.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype);
+  const reports = createServiceCatalogue(homebridge.api.hap).flatMap((row) => {
+    const service = accessory.getServiceById(row.serviceClass, row.subtype);
 
     if (service === undefined) {
       return [];

@@ -15,15 +15,15 @@ import { test } from 'node:test';
 
 import { mock, verify, when } from 'strong-mock';
 
-import { createFakeHap } from '../../features/lib/hap.js';
-import { createFakeAccessory } from '../../features/lib/homebridgeApi.js';
+import { asHapNamespace, createFakeHap } from '../../features/lib/hap.js';
+import { asPlatformAccessory, createFakeAccessory } from '../../features/lib/homebridgeApi.js';
 import { createBasementGuardianAccessory } from '../../src/accessories/basementGuardian.js';
 import { createCustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
 import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
 import { markTrustReportsUnreadable, refuseRestoredControls } from '../../src/accessories/staleMarking.js';
 import { geminiFamily } from '../../src/device/gemini.js';
 
-import type { FakeHapCharacteristic, FakeHapService, FakeServiceClass } from '../../features/lib/hap.js';
+import type { FakeHapCharacteristic, FakeHapService } from '../../features/lib/hap.js';
 import type { FakeAccessory } from '../../features/lib/homebridgeApi.js';
 import type { BasementGuardianAccessory, BasementGuardianAccessoryOptions } from '../../src/accessories/basementGuardian.js';
 import type { ServiceRow } from '../../src/accessories/serviceCatalogue.js';
@@ -36,7 +36,7 @@ import type { AccessoryStore } from '../../src/runtime/accessoryStore.js';
 import type { CommandPort } from '../../src/runtime/commandPort.js';
 import type { MonitoringTrust } from '../../src/runtime/monitoringHealth.js';
 import type { Timers } from '../../src/runtime/timers.js';
-import type { API, Logging, PlatformAccessory } from 'homebridge';
+import type { Logging, PlatformAccessory } from 'homebridge';
 
 const DEVICE_ID = 'account-1_serial-1';
 const DEVICE_TYPE_ID = 'wayneWaterGemini';
@@ -180,22 +180,11 @@ const UNREPUBLISHED_STATUS = 'left by the case';
 // accessory that added them, so one stand-in serves every case.
 const HAP = createFakeHap();
 
-// The stand-ins answer the members the accessory reads and nothing else, which no structural type
-// can express. These widenings let them stand where the accessory takes real Homebridge or HAP types.
-const HAP_NAMESPACE = HAP as unknown as API['hap'];
+// The namespace stand-in, widened where the accessory takes the real namespace.
+const HAP_NAMESPACE = asHapNamespace(HAP);
 
-// The accessory stand-in implements the Homebridge members this test uses. This widening lets the
-// restored-control pass act on the same cached services as the accessory under test.
-function asPlatformAccessory(accessory: FakeAccessory): PlatformAccessory {
-  return accessory as unknown as PlatformAccessory;
-}
-
-// Catalogue rows hold the runtime service class; the stand-in lookup types that class differently.
-function asStandInServiceClass(serviceClass: ServiceRow['serviceClass']): FakeServiceClass {
-  return serviceClass as unknown as FakeServiceClass;
-}
-
-// A null context reaches the identity guard even though constructed accessories carry a record.
+// A null context reaches the identity guard even though constructed accessories carry a record. The
+// value is deliberately not a valid accessory, so no stand-in can be built for it and it is widened.
 function contextlessAccessory(): PlatformAccessory {
   return { context: null } as unknown as PlatformAccessory;
 }
@@ -645,7 +634,7 @@ function rowOfKind(kind: ServiceKind): ServiceRow {
 
 function serviceOf(accessory: FakeAccessory, displayName: string): FakeHapService {
   const row = rowNamed(displayName);
-  const service = accessory.getServiceById(asStandInServiceClass(row.serviceClass), row.subtype);
+  const service = accessory.getServiceById(row.serviceClass, row.subtype);
 
   if (service === undefined) {
     throw new Error(`the accessory publishes no ${displayName} service`);
@@ -691,7 +680,7 @@ function publishedValues(accessory: FakeAccessory): ReadonlyMap<string, unknown>
   const values = new Map<string, unknown>();
 
   for (const row of CATALOGUE) {
-    const service = accessory.getServiceById(asStandInServiceClass(row.serviceClass), row.subtype);
+    const service = accessory.getServiceById(row.serviceClass, row.subtype);
 
     for (const characteristic of service?.characteristics ?? []) {
       values.set(`${row.displayName} / ${characteristic.displayName}`, characteristic.value);
@@ -1414,8 +1403,8 @@ test('publishes no service for a scope whose fields have never validated', () =>
   );
   assert.deepStrictEqual(
     {
-      reported: accessory.getServiceById(asStandInServiceClass(rowNamed('Sump Mains Power').serviceClass), 'sump-mains-power'),
-      adapter: accessory.getServiceById(asStandInServiceClass(rowNamed('Mains Power Lost').serviceClass), 'mains-power-lost'),
+      reported: accessory.getServiceById(rowNamed('Sump Mains Power').serviceClass, 'sump-mains-power'),
+      adapter: accessory.getServiceById(rowNamed('Mains Power Lost').serviceClass, 'mains-power-lost'),
     },
     { reported: undefined, adapter: undefined },
   );

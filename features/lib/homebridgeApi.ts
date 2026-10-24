@@ -26,7 +26,8 @@ import { join } from 'node:path';
 
 import { createFakeHap, deserializeService, serializeService } from './hap.js';
 
-import type { FakeHap, FakeHapService, FakeServiceClass, SerializedService } from './hap.js';
+import type { FakeHap, FakeHapService, FakeServiceClass, SerializedService, ServiceTypeIdentity } from './hap.js';
+import type { BasementGuardianPlatformAccessory } from '../../src/platform.js';
 import type { API } from 'homebridge';
 
 type LifecycleEvent = 'didFinishLaunching' | 'shutdown';
@@ -41,8 +42,8 @@ export interface FakeAccessory {
   readonly context: Record<string, unknown>;
   /** Every service this accessory carries, as the real `PlatformAccessory` exposes its own. */
   readonly services: readonly FakeHapService[];
-  getService(serviceClass: FakeServiceClass): FakeHapService | undefined;
-  getServiceById(serviceClass: FakeServiceClass, subtype: string): FakeHapService | undefined;
+  getService(serviceClass: ServiceTypeIdentity): FakeHapService | undefined;
+  getServiceById(serviceClass: ServiceTypeIdentity, subtype: string): FakeHapService | undefined;
   addService(serviceClass: FakeServiceClass, displayName?: string, subtype?: string): FakeHapService;
   removeService(service: FakeHapService): void;
 }
@@ -184,11 +185,11 @@ export class HarnessPlatformAccessory implements FakeAccessory {
 
   // The real `Accessory.getService` answers the first service of that type whatever its subtype, so
   // a caller whose service has siblings has to ask `getServiceById` instead.
-  getService(serviceClass: FakeServiceClass): FakeHapService | undefined {
+  getService(serviceClass: ServiceTypeIdentity): FakeHapService | undefined {
     return this.services.find((service) => service.UUID === serviceClass.UUID);
   }
 
-  getServiceById(serviceClass: FakeServiceClass, subtype: string): FakeHapService | undefined {
+  getServiceById(serviceClass: ServiceTypeIdentity, subtype: string): FakeHapService | undefined {
     return this.services.find((service) => service.UUID === serviceClass.UUID && service.subtype === subtype);
   }
 
@@ -227,6 +228,18 @@ export class HarnessPlatformAccessory implements FakeAccessory {
 /** Builds one accessory stand-in, for a scenario that reads the accessory service surface directly. */
 export function createFakeAccessory(displayName: string, uuid: string): FakeAccessory {
   return new HarnessPlatformAccessory(displayName, uuid);
+}
+
+/**
+ * Widens an accessory stand-in to the Homebridge accessory the plugin takes.
+ *
+ * The real `PlatformAccessory` carries an event emitter and the whole HAP accessory behind it, which
+ * no stand-in carries, so no structural type admits one. This is the one place a stand-in stands
+ * where the code under test takes a real accessory.
+ */
+export function asPlatformAccessory(accessory: FakeAccessory): BasementGuardianPlatformAccessory {
+  // The stand-in carries only the members the plugin reads; see the note above.
+  return accessory as unknown as BasementGuardianPlatformAccessory;
 }
 
 /** Starts a Homebridge API stand-in with its own temporary storage directory. */

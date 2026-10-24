@@ -19,11 +19,9 @@ import { PLATFORM_NAME, PLUGIN_NAME } from '../../src/settings.js';
 import { parseAccessoryDevices } from '../lib/deviceTables.js';
 import { currentAccessory, pushedValue, serviceOf } from '../lib/publishedServices.js';
 
-import type { FakeServiceClass } from '../lib/hap.js';
 import type { FakeAccessory } from '../lib/homebridgeApi.js';
 import type { BasementGuardianWorld } from '../support/world.js';
 import type { DataTable } from '@cucumber/cucumber';
-import type { API } from 'homebridge';
 
 const DEVICE_ID = 'placeholder-gemini';
 
@@ -138,7 +136,7 @@ async function assertOneAccessoryWithTruthfulAccessoryInformation(world: Basemen
   });
 
   const accessoryInformation = accessories[0].getService(homebridge.hap.Service.AccessoryInformation);
-  const catalogue = createServiceCatalogue(homebridge.hap as unknown as API['hap']);
+  const catalogue = createServiceCatalogue(homebridge.api.hap);
   assert.deepEqual(
     catalogue.map((row) => row.kind),
     EXPECTED_GEMINI_SERVICE_KINDS,
@@ -237,14 +235,10 @@ Then('the accessory remembers the device type {string}', async function (this: B
 async function assertCachedGeminiServicesInactive(world: BasementGuardianWorld): Promise<void> {
   const homebridge = await world.homebridge();
   const accessory = currentAccessory(homebridge);
-  const rows = createServiceCatalogue(homebridge.hap as unknown as API['hap']).filter((row) => row.kind !== 'basement-guardian-offline');
+  const rows = createServiceCatalogue(homebridge.api.hap).filter((row) => row.kind !== 'basement-guardian-offline');
 
   assert.deepEqual(
-    rows.map((row) =>
-      pushedValue(
-        accessory?.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype)?.getCharacteristic(homebridge.hap.Characteristic.StatusActive),
-      ),
-    ),
+    rows.map((row) => pushedValue(accessory?.getServiceById(row.serviceClass, row.subtype)?.getCharacteristic(homebridge.hap.Characteristic.StatusActive))),
     rows.map(() => false),
   );
 }

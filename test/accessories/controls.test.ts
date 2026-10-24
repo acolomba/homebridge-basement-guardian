@@ -13,7 +13,7 @@ import { describe, test } from 'node:test';
 
 import { mock, verify, when } from 'strong-mock';
 
-import { createFakeHap } from '../../features/lib/hap.js';
+import { asHapNamespace, asService, createFakeHap } from '../../features/lib/hap.js';
 import { bindRestoredControlRefusal, createControlBinder } from '../../src/accessories/controls.js';
 
 import type { FakeHapCharacteristic, FakeHapService, FakeSetHandler } from '../../features/lib/hap.js';
@@ -21,7 +21,7 @@ import type { ControlBinder, ControlBinderOptions } from '../../src/accessories/
 import type { DeviceCapability } from '../../src/device/family.js';
 import type { CommandOutcome, CommandPort } from '../../src/runtime/commandPort.js';
 import type { Timers } from '../../src/runtime/timers.js';
-import type { API, Logging, Service } from 'homebridge';
+import type { Logging } from 'homebridge';
 
 const DEVICE_ID = 'account-1_serial-1';
 const SELF_TEST = 'system-self-test';
@@ -45,15 +45,8 @@ const SUCCESS = 0;
 // lives on the service that carries it, so one stand-in serves every case.
 const HAP = createFakeHap();
 
-// The stand-in carries only part of the real namespace, so no structural type admits it; the
-// widening is what lets it stand where the plugin takes the real namespace.
-const HAP_NAMESPACE = HAP as unknown as API['hap'];
-
-// The stand-in service carries only part of a real `Service`, so no structural type admits it; this
-// is the one place a stand-in service stands where the code under test takes a Service.
-function asService(service: FakeHapService): Service {
-  return service as unknown as Service;
-}
+// The namespace stand-in, widened where the plugin takes the real namespace.
+const HAP_NAMESPACE = asHapNamespace(HAP);
 
 /** One deferral the code under test asked the injected port for. */
 interface Deferral {

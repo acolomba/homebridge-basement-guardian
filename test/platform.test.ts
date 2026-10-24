@@ -20,8 +20,8 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { It, mock, verify, when } from 'strong-mock';
 
-import { createFakeHap } from '../features/lib/hap.js';
-import { HarnessPlatformAccessory } from '../features/lib/homebridgeApi.js';
+import { asHapNamespace, createFakeHap } from '../features/lib/hap.js';
+import { asPlatformAccessory, HarnessPlatformAccessory } from '../features/lib/homebridgeApi.js';
 import { createBasementGuardianAccessory } from '../src/accessories/basementGuardian.js';
 import { createServiceCatalogue } from '../src/accessories/serviceCatalogue.js';
 import { markTrustReportsUnreadable } from '../src/accessories/staleMarking.js';
@@ -50,7 +50,7 @@ import {
   unsupportedRegistry,
 } from './platformSeeds.js';
 
-import type { FakeCharacteristicClass, FakeHapService, FakeServiceClass } from '../features/lib/hap.js';
+import type { FakeCharacteristicClass, FakeHapService } from '../features/lib/hap.js';
 import type { FakeAccessory } from '../features/lib/homebridgeApi.js';
 import type { BasementGuardianAccessory } from '../src/accessories/basementGuardian.js';
 import type { NotificationServiceKind } from '../src/accessories/services.js';
@@ -156,12 +156,11 @@ const CONTACT_NOT_DETECTED = 1;
 // bases rather than identifier constants; a second stand-in of the same boundary would drift.
 const HAP = createFakeHap();
 
-// The stand-in answers the members the plugin reads and nothing else, which no structural type can
-// express; the widening is what lets it stand where the plugin takes the real namespace.
-const HAP_NAMESPACE = HAP as unknown as API['hap'];
+// The namespace stand-in, widened where the plugin takes the real namespace.
+const HAP_NAMESPACE = asHapNamespace(HAP);
 
-// The fake HAP accessory carries the consumed service behavior; its constructor
-// crosses the same nominal HAP boundary as the namespace above.
+// The real `PlatformAccessory` declares a private static member, which makes its constructor type
+// nominal: no stand-in class can satisfy it structurally, so this one widening stays.
 const PLATFORM_ACCESSORY: API['platformAccessory'] = HarnessPlatformAccessory as unknown as API['platformAccessory'];
 
 // The accessory identifier the plugin derives for this device, taken from the same derivation the
@@ -308,7 +307,7 @@ function restoredAccessories(): RestoredAccessories {
 
     flood.updateCharacteristic(HAP.Characteristic.LeakDetected, LEAK_DETECTED);
     flood.updateCharacteristic(HAP.Characteristic.StatusActive, true);
-    accessories.set(uuid, accessory as unknown as BasementGuardianPlatformAccessory);
+    accessories.set(uuid, asPlatformAccessory(accessory));
     floods.push(flood);
   }
 
@@ -326,7 +325,7 @@ function restoredAccessoryCarryingNoTrustReport(): { accessories: Map<string, Ba
   control.updateCharacteristic(HAP.Characteristic.On, true);
 
   return {
-    accessories: new Map<string, BasementGuardianPlatformAccessory>([[ACCESSORY_UUID, accessory as unknown as BasementGuardianPlatformAccessory]]),
+    accessories: new Map<string, BasementGuardianPlatformAccessory>([[ACCESSORY_UUID, asPlatformAccessory(accessory)]]),
     control,
   };
 }
@@ -357,7 +356,7 @@ function restoredAccessoryRepublishingItsRows(): RepublishingAccessory {
 
   const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
   const built = createBasementGuardianAccessory({
-    accessory: accessory as unknown as PlatformAccessory,
+    accessory: asPlatformAccessory(accessory),
     hap: HAP_NAMESPACE,
     registry: powerRegistry(),
     log: createSilentLog(),
@@ -375,7 +374,7 @@ function restoredAccessoryRepublishingItsRows(): RepublishingAccessory {
   }
 
   return {
-    accessories: new Map<string, BasementGuardianPlatformAccessory>([[ACCESSORY_UUID, accessory as unknown as BasementGuardianPlatformAccessory]]),
+    accessories: new Map<string, BasementGuardianPlatformAccessory>([[ACCESSORY_UUID, asPlatformAccessory(accessory)]]),
     basementGuardianAccessories: new Map<string, BasementGuardianAccessory>([[ACCESSORY_UUID, built]]),
     floods: [flood],
   };
@@ -442,14 +441,14 @@ function onlyRegisteredAccessory(registerCalls: readonly FakeApiCall[]): FakeAcc
 // Every catalogue service that accessory carries, by the name HomeKit shows.
 function publishedServiceNames(accessory: FakeAccessory): readonly string[] {
   return createServiceCatalogue(HAP_NAMESPACE)
-    .filter((row) => accessory.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype) !== undefined)
+    .filter((row) => accessory.getServiceById(row.serviceClass, row.subtype) !== undefined)
     .map((row) => row.displayName);
 }
 
 // What a named row currently reports for the trust flag every service carries.
 function statusActiveOf(accessory: FakeAccessory, displayName: string): unknown {
   const row = createServiceCatalogue(HAP_NAMESPACE).find((candidate) => candidate.displayName === displayName);
-  const service = row === undefined ? undefined : accessory.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype);
+  const service = row === undefined ? undefined : accessory.getServiceById(row.serviceClass, row.subtype);
 
   return service?.characteristics.find((candidate) => candidate.UUID === HAP.Characteristic.StatusActive.UUID)?.value;
 }
@@ -466,7 +465,7 @@ function registeredDevice(context: DiscoveryContext, accessories: Map<string, Ba
   const accessory = new HarnessPlatformAccessory('Sump System', ACCESSORY_UUID);
   accessory.context.lastVendorName = 'Sump System';
   accessory.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
-  accessories.set(ACCESSORY_UUID, accessory as unknown as BasementGuardianPlatformAccessory);
+  accessories.set(ACCESSORY_UUID, asPlatformAccessory(accessory));
   store.applyDiscovery(geminiDevice());
   registerDiscoveredDevices(context, [DEVICE_ID], store);
 
@@ -1550,7 +1549,7 @@ describe('configureAccessory', () => {
     when(() => platform.api.hap).thenReturn(HAP_NAMESPACE);
 
     // act
-    platform.configureAccessory(restoredAccessory as unknown as PlatformAccessory);
+    platform.configureAccessory(asPlatformAccessory(restoredAccessory));
 
     // assert
     assert.strictEqual(platform.accessories.get(ACCESSORY_UUID), restoredAccessory);
@@ -1583,7 +1582,7 @@ describe('configureAccessory', () => {
 
     // act
     try {
-      platform.configureAccessory(restoredAccessory as unknown as PlatformAccessory);
+      platform.configureAccessory(asPlatformAccessory(restoredAccessory));
     } catch (error: unknown) {
       thrown = error;
     }
@@ -1594,7 +1593,7 @@ describe('configureAccessory', () => {
     assert.deepStrictEqual(
       {
         threw: thrown === undefined ? undefined : 'restored service failure escaped',
-        owned: platform.accessories.get(ACCESSORY_UUID) === (restoredAccessory as unknown as BasementGuardianPlatformAccessory),
+        owned: platform.accessories.get(ACCESSORY_UUID) === asPlatformAccessory(restoredAccessory),
         flood: {
           statusActive: flood.getCharacteristic(HAP.Characteristic.StatusActive).value,
           leakDetected: flood.getCharacteristic(HAP.Characteristic.LeakDetected).value,
@@ -1682,7 +1681,7 @@ describe('configureAccessory', () => {
     when(() => platform.api.hap).thenReturn(HAP_NAMESPACE);
 
     // act
-    platform.configureAccessory(restoredAccessory as unknown as PlatformAccessory);
+    platform.configureAccessory(asPlatformAccessory(restoredAccessory));
 
     // assert
     assert.deepStrictEqual(
@@ -1695,7 +1694,7 @@ describe('configureAccessory', () => {
           statusActive: offline.getCharacteristic(HAP.Characteristic.StatusActive).value,
           contactState: offline.getCharacteristic(HAP.Characteristic.ContactSensorState).value,
         },
-        recorded: platform.accessories.get(ACCESSORY_UUID) === (restoredAccessory as unknown as BasementGuardianPlatformAccessory),
+        recorded: platform.accessories.get(ACCESSORY_UUID) === asPlatformAccessory(restoredAccessory),
       },
       {
         flood: { statusActive: false, leakDetected: HAP.Characteristic.LeakDetected.LEAK_DETECTED },
@@ -1721,7 +1720,7 @@ describe('configureAccessory', () => {
     when(() => platform.api.hap).thenReturn(HAP_NAMESPACE);
 
     // act
-    platform.configureAccessory(restoredAccessory as unknown as PlatformAccessory);
+    platform.configureAccessory(asPlatformAccessory(restoredAccessory));
 
     // assert
     assert.deepStrictEqual(
@@ -1778,7 +1777,7 @@ describe('applyMonitoringHealth', () => {
       .times(1);
     const context = discoveryContext({
       api,
-      accessories: new Map<string, BasementGuardianPlatformAccessory>([[ACCESSORY_UUID, accessory as unknown as BasementGuardianPlatformAccessory]]),
+      accessories: new Map<string, BasementGuardianPlatformAccessory>([[ACCESSORY_UUID, asPlatformAccessory(accessory)]]),
       registry: unknownRegistry(),
       log: createRecordingLog(messages),
     });
@@ -2903,7 +2902,7 @@ describe('registerDiscoveredDevices', () => {
     const uuid = ACCESSORY_UUID;
     const existing = new HarnessPlatformAccessory('Sump System', uuid);
     existing.context.lastVendorName = 'Sump System';
-    accessories.set(uuid, existing as unknown as BasementGuardianPlatformAccessory);
+    accessories.set(uuid, asPlatformAccessory(existing));
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery(geminiDevice());
 
@@ -2963,7 +2962,7 @@ describe('registerDiscoveredDevices', () => {
     const existing = new HarnessPlatformAccessory('Sump System', uuid);
     existing.context.lastVendorName = 'Sump System';
     existing.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
-    accessories.set(uuid, existing as unknown as BasementGuardianPlatformAccessory);
+    accessories.set(uuid, asPlatformAccessory(existing));
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery({ ...geminiDevice(), name: 'Sump Sentry' });
 
@@ -2986,7 +2985,7 @@ describe('registerDiscoveredDevices', () => {
     const existing = new HarnessPlatformAccessory('Sump System', ACCESSORY_UUID);
     existing.context.lastVendorName = 'Sump System';
     existing.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
-    accessories.set(ACCESSORY_UUID, existing as unknown as BasementGuardianPlatformAccessory);
+    accessories.set(ACCESSORY_UUID, asPlatformAccessory(existing));
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery({ ...geminiDevice(), name: 'Sump Sentry' });
     const persisted: { displayName: string; context: unknown }[] = [];
@@ -3076,7 +3075,7 @@ describe('registerDiscoveredDevices', () => {
     const existing = new HarnessPlatformAccessory('Basement Pump', uuid);
     existing.context.lastVendorName = 'Sump System';
     existing.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
-    accessories.set(uuid, existing as unknown as BasementGuardianPlatformAccessory);
+    accessories.set(uuid, asPlatformAccessory(existing));
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery({ ...geminiDevice(), name: 'Sump Sentry' });
 
@@ -3104,7 +3103,7 @@ describe('registerDiscoveredDevices', () => {
     const existing = new HarnessPlatformAccessory('Sump System', uuid);
     existing.context.lastVendorName = 'Sump System';
     existing.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
-    accessories.set(uuid, existing as unknown as BasementGuardianPlatformAccessory);
+    accessories.set(uuid, asPlatformAccessory(existing));
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery(geminiDevice());
 
@@ -3237,7 +3236,7 @@ describe('registerDiscoveredDevices', () => {
     const existing = new HarnessPlatformAccessory('Sump System', ACCESSORY_UUID);
     existing.context.lastVendorName = 'Sump System';
     existing.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
-    accessories.set(ACCESSORY_UUID, existing as unknown as BasementGuardianPlatformAccessory);
+    accessories.set(ACCESSORY_UUID, asPlatformAccessory(existing));
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery({ ...geminiDevice(), name: 'Sump Sentry' });
     const family = recoveringFamily();
@@ -3715,7 +3714,7 @@ describe('registerDiscoveredDevices', () => {
     const accessory = new HarnessPlatformAccessory('Sump System', ACCESSORY_UUID);
     accessory.context.lastVendorName = 'Sump System';
     accessory.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
-    accessories.set(ACCESSORY_UUID, accessory as unknown as BasementGuardianPlatformAccessory);
+    accessories.set(ACCESSORY_UUID, asPlatformAccessory(accessory));
     store.applyDiscovery({ ...geminiDevice(), data: wireDevice.data });
     registerDiscoveredDevices(context, [DEVICE_ID], store);
     const liveAccessory = builtAccessory(basementGuardianAccessories);
@@ -4206,7 +4205,7 @@ describe('registerDiscoveredDevices', () => {
     const accessory = new HarnessPlatformAccessory('Sump System', ACCESSORY_UUID);
     accessory.context.lastVendorName = 'Sump System';
     accessory.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
-    accessories.set(ACCESSORY_UUID, accessory as unknown as BasementGuardianPlatformAccessory);
+    accessories.set(ACCESSORY_UUID, asPlatformAccessory(accessory));
     store.applyDiscovery({ ...geminiDevice(), connectivity: { connected: false, timestamp: 0 } });
 
     // act
@@ -4439,7 +4438,7 @@ describe('removeDiscoveredDevice', () => {
     }).thenReturn(undefined);
     const uuid = ACCESSORY_UUID;
     const existing = new HarnessPlatformAccessory('Sump System', uuid);
-    accessories.set(uuid, existing as unknown as BasementGuardianPlatformAccessory);
+    accessories.set(uuid, asPlatformAccessory(existing));
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery(geminiDevice());
 

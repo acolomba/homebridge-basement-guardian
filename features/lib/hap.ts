@@ -30,6 +30,8 @@
 
 import { createHash } from 'node:crypto';
 
+import type { API, Service } from 'homebridge';
+
 // Every type Apple assigns lives in one namespace, so a standard identifier is its own short prefix
 // completed by this suffix.
 const APPLE_BASE_UUID = '-0000-1000-8000-0026BB765291';
@@ -450,6 +452,16 @@ export interface FakeHapService {
   addOptionalCharacteristic(characteristicClass: FakeCharacteristicClass): void;
 }
 
+/**
+ * Anything that names a service type by the identifier HAP assigns it.
+ *
+ * A lookup matches by identifier alone, so it takes a stand-in class and a real HAP class alike: the
+ * catalogue declares its classes against the real types, and both kinds carry a static `UUID`.
+ */
+export interface ServiceTypeIdentity {
+  readonly UUID: string;
+}
+
 /** A stand-in service type: constructed with a display name and a subtype, and carrying the type's own identifier. */
 export interface FakeServiceClass {
   readonly UUID: string;
@@ -768,4 +780,20 @@ const HAP: FakeHap = {
  */
 export function createFakeHap(): FakeHap {
   return HAP;
+}
+
+// The widenings, kept in one place. The stand-ins answer the members the plugin reads and nothing
+// else, and the real types are classes with dozens of members no stand-in carries, so no structural
+// type admits them. Each widening lets a stand-in stand where the code under test takes the real type.
+
+/** Widens the namespace stand-in to the injected HAP namespace the plugin takes. */
+export function asHapNamespace(namespace: FakeHap): API['hap'] {
+  // The stand-in carries only the members the plugin reads; see the note above.
+  return namespace as unknown as API['hap'];
+}
+
+/** Widens one stand-in service to the HAP `Service` the plugin takes. */
+export function asService(service: FakeHapService): Service {
+  // The stand-in carries only the members the plugin reads; see the note above.
+  return service as unknown as Service;
 }
