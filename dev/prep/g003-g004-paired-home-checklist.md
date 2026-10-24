@@ -50,7 +50,7 @@ test: With the plugin running normally (no forced degradation), open the Home ap
 
 expected: Both Contact Sensors render as expected Apple Home tiles, each independently reflecting its own pump's running state, with no cross-talk between the two.
 
-why_human: Apple Home's rendering of a real HAP Contact Sensor accessory service, in a real paired home with a real hub, is Apple's behavior -- no fake HAP stand-in (`features/support/fakeHap.ts`) can be evidence for it.
+why_human: Apple Home's rendering of a real HAP Contact Sensor accessory service, in a real paired home with a real hub, is Apple's behavior -- no fake HAP stand-in (`features/lib/hap.ts`) can be evidence for it.
 
 status: pending
 

@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview The HALO system's identity, and nothing else.
  *

@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: MIT
-// The client port below is declared by this consumer rather than imported from
-// the transport library, so the shadow client's own tests inject a plain object
-// and open no socket, while the transport-level scenarios drive the real
-// library against a local broker.
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Adapts one MQTT connection to shadow notifications and bounded operations.
+ * The consumer-declared client port allows offline injection.
+ */
 
 // The default import is deliberate: the named ESM export of a builtin is a
 // snapshot binding, which the test runner's timer mocks cannot replace, so the
@@ -164,7 +169,7 @@ export function createMqttTransport(options: MqttTransportOptions): MqttTranspor
     // the bare host, so that argument is deliberately unused and the signer
     // builds from the endpoint instead. The hook cannot await, which is why the
     // signer reads a cache the rotation timer keeps fresh (SYNC-04).
-    transformWsUrl: (_url: string, _connectOptions: object, live: MqttClientIdentity): string => options.signUrl(live),
+    transformWsUrl: (...handshake: Parameters<MqttConnectOptions['transformWsUrl']>): string => options.signUrl(handshake[2]),
     wsOptions: { headers: { 'User-Agent': options.userAgent } },
   });
   let ending: Promise<void> | undefined;

@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview One row per published service, and the get-or-add, remove, and
  * push helpers an accessory drives them with.
@@ -226,9 +231,9 @@ const SEEING_LESS_REASONS: ReadonlySet<DistrustReason> = new Set<DistrustReason>
  *
  * A row is trustworthy while no untrusted scope of its own carries a reason it
  * does not tolerate. Every reason counts here, including the one that says only
- * that the plugin is seeing less, because this drives the marking half of the
- * safety contract: the accessory publishes `StatusActive = false` for an
- * untrustworthy row.
+ * that the plugin is seeing less. This is the marking half of the safety
+ * contract. `isRowFullyTrusted` asks it once for each scope a row reads, and
+ * `StatusActive` reports that answer.
  *
  * The withholding half is `isRowPublishable`'s, and the two rules differ on
  * exactly that one reason. Marking answers "can the plugin call this current?",
@@ -236,7 +241,7 @@ const SEEING_LESS_REASONS: ReadonlySet<DistrustReason> = new Set<DistrustReason>
  * this overwrite a good value with a doubtful one?", which a lost transport
  * does not make true (D-014, D-05).
  */
-export function isRowTrusted(row: RowTrust, untrustedScopes: readonly UntrustedScope[]): boolean {
+function isRowTrusted(row: RowTrust, untrustedScopes: readonly UntrustedScope[]): boolean {
   return !untrustedScopes.some((untrusted) => untrusted.scope === row.scope && !row.toleratedDistrust.includes(untrusted.reason));
 }
 
@@ -1024,10 +1029,11 @@ export function publishPersistentFailure(hap: API['hap'], service: Service, char
  * string `Name` already carries, so no second list of service names can drift
  * from the catalogue.
  *
- * `testCharacteristic` is asked before `getCharacteristic` because the real HAP
- * creates a declared-but-absent characteristic on the way out of
- * `getCharacteristic`, which would name a service the caller only meant to
- * inspect.
+ * The function reads the current value only when `testCharacteristic` finds
+ * the characteristic on the service. As a result, the read does not depend on
+ * what `getCharacteristic` does for a characteristic the service does not
+ * carry. The real HAP adds that characteristic, and the test stand-in answers
+ * `undefined`.
  */
 export function seedConfiguredName(hap: API['hap'], service: Service, displayName: string): void {
   const characteristic = hap.Characteristic.ConfiguredName;

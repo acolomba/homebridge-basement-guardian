@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests the bundled vendor protocol constants.
+ */
+
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
@@ -5,9 +15,15 @@ import { PROTOCOL } from '../src/protocol.js';
 
 import type { ProtocolConstants } from '../src/protocol.js';
 
-// The six public vendor constants the plugin bundles (D-07). Declaring the list
-// against the contract type keeps it aligned with the interface.
-const constantNames: (keyof ProtocolConstants)[] = ['apiUrl', 'auth0Realm', 'auth0Url', 'awsRegion', 'clientId', 'protocol'];
+// These public values are independent of the imported bundle (D-07).
+const EXPECTED_PROTOCOL = {
+  apiUrl: 'https://api.iot8020.com',
+  clientId: '6QsGT46CLgeTRGbDDGUwSANLPRA4n5Zs',
+  auth0Url: 'https://connectsense-staging.auth0.com',
+  auth0Realm: 'wayne-water',
+  awsRegion: 'us-east-1',
+  protocol: 'wss',
+} satisfies ProtocolConstants;
 
 test('bundles exactly the six public vendor protocol constants', () => {
   // act
@@ -17,13 +33,10 @@ test('bundles exactly the six public vendor protocol constants', () => {
   assert.deepStrictEqual(bundledNames, ['apiUrl', 'auth0Realm', 'auth0Url', 'awsRegion', 'clientId', 'protocol']);
 });
 
-for (const constantName of constantNames) {
-  test(`bundles ${constantName} as a non-empty string`, () => {
-    // act
-    const constant = PROTOCOL[constantName];
+test('bundles the exact public vendor protocol values', () => {
+  // act
+  const bundledProtocol = PROTOCOL;
 
-    // assert
-    assert.strictEqual(typeof constant, 'string');
-    assert.strictEqual(constant.length > 0, true);
-  });
-}
+  // assert
+  assert.deepStrictEqual(bundledProtocol, EXPECTED_PROTOCOL);
+});

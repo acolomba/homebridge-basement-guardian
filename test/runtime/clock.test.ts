@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Checks the process wall-clock adapter.
+ */
+
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
@@ -13,8 +23,11 @@ test('reports the current process time in milliseconds', (t) => {
   // arrange
   t.mock.timers.enable({ apis: ['Date'], now: 1_700_000_000_000 });
 
-  // act & assert
-  assert.strictEqual(systemClock.now(), 1_700_000_000_000);
+  // act
+  const reading = systemClock.now();
+
+  // assert
+  assert.strictEqual(reading, 1_700_000_000_000);
 });
 
 test('reports a time that advances with the process clock', (t) => {

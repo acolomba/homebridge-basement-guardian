@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- The plugin handles cloud outages and stale readings more safely, hides credentials in logs, and adds HomeKit regression coverage. (#22)
+
 - Development checks now run static analysis in parallel and require isolated coverage for staged source changes.
 
 - If the plugin cannot remove a system that left your account, it now marks that system untrustworthy and reports the error.

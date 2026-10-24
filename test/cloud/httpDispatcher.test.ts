@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests HTTP requests, cancellation, and ALPN through loopback servers.
+ */
+
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { test } from 'node:test';
@@ -79,12 +89,24 @@ test('forwards the request method, headers, and body, and returns the server res
   );
 });
 
-test('rejects immediately when the caller supplies an already-aborted signal', async (t) => {
+test('rejects with the caller reason without sending an already-aborted request', async (t) => {
   // arrange
   const server = await startEchoServer(t);
+  const cancellation = new Error('caller cancelled the request');
 
-  // act & assert
-  await assert.rejects(() => httpFetch(server.url, { signal: AbortSignal.abort() }));
+  // act
+  const fetching = httpFetch(server.url, { signal: AbortSignal.abort(cancellation) });
+
+  // assert
+  await assert.rejects(
+    () => fetching,
+    (error: unknown) => {
+      assert.strictEqual(error, cancellation);
+
+      return true;
+    },
+  );
+  assert.strictEqual(server.request(), undefined);
 });
 
 // A real loopback connection, not a mocked fetch: this module's entire purpose is to steer which
@@ -94,15 +116,20 @@ test('negotiates HTTP/1.1 even when the server offers HTTP/2', async (t) => {
   const server = await startAlpnServer(JSON.stringify({ answer: 'echoed' }));
   t.after(() => server.close());
   const originalCertificates = getCACertificates('default');
-  setDefaultCACertificates([...originalCertificates, server.certificate]);
   t.after(() => {
     setDefaultCACertificates(originalCertificates);
   });
+  setDefaultCACertificates([...originalCertificates, server.certificate]);
 
   // act
-  await httpFetch(server.url);
+  const response = await httpFetch(server.url);
+  const body: unknown = await response.json();
   const negotiatedProtocol = await server.negotiatedProtocol();
 
   // assert
+  assert.deepStrictEqual(
+    { status: response.status, contentType: response.headers.get('content-type'), body },
+    { status: 200, contentType: 'application/json', body: { answer: 'echoed' } },
+  );
   assert.strictEqual(negotiatedProtocol, 'http/1.1');
 });

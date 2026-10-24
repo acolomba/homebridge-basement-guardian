@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Declares accessory-scoped persistence.
+ */
+
 /**
  * Sink for an accessory's own persisted state.
  *

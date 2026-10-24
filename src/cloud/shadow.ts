@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: MIT
-// Nothing here logs a topic, a device identifier, a URL, or a payload. The
-// signed URL carries the credential scope, the session token, and the
-// signature, and the device identifier embeds the account identifier (AUTH-02).
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Routes reported shadows and manages their connection lifecycle.
+ * Diagnostics exclude topics, identifiers, URLs and payloads (AUTH-02).
+ */
 
 import { presignIotWebsocketUrl } from './sigv4.js';
 import { isRecord } from './types.js';
@@ -98,11 +104,8 @@ export interface ShadowClient {
 
 // One connection's own state.
 //
-// These were once plain variables shared by every connection the client had
-// ever opened, which let a connection the client had already replaced rewrite
-// the live one's health and start its own retry chain. Each connection now
-// carries its own record, and identity decides whether a notification is worth
-// listening to at all (SYNC-04).
+// Each connection owns its health and release state. Only notifications from
+// the current connection may change live health or start a retry (SYNC-04).
 interface ShadowConnection {
   transport: MqttTransport;
   /** The socket opened, which tells a refused handshake from a routine close. */
@@ -198,7 +201,7 @@ function toReportedPatch(document: ShadowDocument): ReportedPatch {
   return {
     data: isRecord(sections.data) ? sections.data : undefined,
     state: isRecord(sections.state) ? sections.state : undefined,
-    version: typeof document.version === 'number' ? document.version : undefined,
+    version: typeof document.version === 'number' && Number.isFinite(document.version) ? document.version : undefined,
   };
 }
 

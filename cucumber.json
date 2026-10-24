@@ -1,9 +1,10 @@
 {
   "default": {
     "paths": ["features/**/*.feature"],
-    "import": ["dist-test/features/support/**/*.js"],
+    "import": ["dist-test/features/support/**/*.js", "dist-test/features/step_definitions/**/*.steps.js"],
     "tags": "not @real",
-    "format": ["summary"]
+    "format": ["summary"],
+    "order": "random"
   },
   "real": {
     "paths": ["features/real-pump/**/*.feature"],

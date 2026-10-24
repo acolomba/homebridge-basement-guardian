@@ -1,0 +1,48 @@
+Feature: Account configuration
+
+  The plugin refuses invalid account settings and stays idle. It explains what to fix without
+  contacting the vendor service. A local fake cloud stands in for the vendor service.
+
+  Scenario: The plugin starts nothing when the account email is missing
+    Given the fake cloud
+    Given these account settings:
+      | password | placeholder-password |
+    When the plugin loads
+    Then the plugin refuses to start because "the account email is missing."
+    Then the plugin registers no lifecycle listener
+    Then the plugin holds no accessory
+    Then no request reaches the fake cloud
+
+  Scenario: The plugin starts nothing when the account password is missing
+    Given the fake cloud
+    Given these account settings:
+      | email | account@example.test |
+    When the plugin loads
+    Then the plugin refuses to start because "the account password is missing."
+    Then the plugin registers no lifecycle listener
+    Then the plugin holds no accessory
+    Then no request reaches the fake cloud
+
+  Scenario: The plugin starts nothing on an out-of-range poll interval
+    Given the fake cloud
+    Given these account settings:
+      | email        | account@example.test |
+      | password     | placeholder-password |
+      | pollInterval | 60                   |
+    When the plugin loads
+    Then the plugin refuses to start because "pollInterval must be a whole number of seconds from 300 to 3600, but the supplied value is invalid."
+    Then the plugin registers no lifecycle listener
+    Then the plugin holds no accessory
+    Then no request reaches the fake cloud
+
+  Scenario: The plugin starts nothing when the account email is not an email address
+    Given the fake cloud
+    Given these account settings:
+      | email    | jane.doe@company     |
+      | password | placeholder-password |
+    When the plugin loads
+    Then the plugin refuses to start because "the account email must be an email address."
+    Then the plugin registers no lifecycle listener
+    Then the plugin holds no accessory
+    Then no logged line contains the configured account email
+    Then no request reaches the fake cloud

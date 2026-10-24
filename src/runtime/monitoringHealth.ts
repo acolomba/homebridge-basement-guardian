@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview What the plugin can currently say about its own ability to
  * observe one account, kept apart from what it can say about a device.
@@ -52,13 +57,10 @@ export const MISSED_HEARTBEATS_BEFORE_SILENT = 2;
 /**
  * What this module can say about one account as a whole.
  *
- * There is one member, and that is the point: polling is an account-wide
- * activity -- one loop, one credential, one endpoint -- so a run of failed
- * polls is a fact about the account and every pump on it. Silence is not. It is
- * a fact about one controller, this module has always tracked it per device,
- * and `silentDevices()` is where that answer is read. Collapsing it into a
- * second member here is what left a two-pump owner told the plugin could not
- * vouch for a pump that was reporting perfectly (D-03, D-04).
+ * Polling is account-wide: one loop, one credential and one endpoint serve
+ * every pump. A run of failed polls is therefore shared by the account.
+ * Silence belongs to one controller and is read through `silentDevices()`,
+ * so a quiet pump cannot withdraw trust from a reporting neighbour (D-03, D-04).
  */
 export interface TransportTrust {
   restDegraded: boolean;
@@ -156,11 +158,11 @@ export interface MonitoringHealth {
   /** Drops a removed device's stamp, so the tracked set cannot grow for the life of the process. */
   forgetDevice(deviceId: string): void;
   /**
-   * Every admitted device whose live path has been silent for two heartbeats,
-   * in admission order so a caller and a test read the same list.
+   * Returns admitted devices whose live paths have been silent for two
+   * heartbeats, in admission order.
    */
   silentDevices(): readonly string[];
-  /** The verdict, evaluated against the injected clock at the moment of the call. */
+  /** Returns the current account-wide transport verdict. */
   trustNow(): TransportTrust;
 }
 
@@ -190,22 +192,11 @@ function isRestDegraded(consecutiveFailures: number): boolean {
 // early, which is the direction this measurement is allowed to be wrong in
 // (D-07, IN-03).
 //
-// The wall term is omitted when the store holds no anchor, and the answer is
-// then the forward-only term alone. That is the narrow reading of D-08, and it
-// is taken deliberately over the literal one. D-08 says an install carrying no
-// anchor "falls through to D-02 -- silent until told otherwise", and D-02 is the
-// rule that an accessory with no entry in the pushed map reads silent. Read
-// narrowly, D-02 governs that platform-map lookup rather than this measurement,
-// so a device this module has admitted but never heard from is judged from its
-// admission and reads trustworthy until two heartbeats of forward-only time
-// pass, exactly as it did before any anchor existed. Read literally as a rule
-// about the measurement, a fresh admission would be silent at once -- which
-// contradicts this module's own rule that admission is the right zero, and would
-// leave every device on every install untrusted for fifteen minutes after an
-// upgrade, for no observation anyone made. The two readings agree on the case
-// D-08 is actually about: an accessory restored from cache before discovery
-// completes has no map entry and does not vouch, and it gets that answer from
-// the platform lookup rather than from here.
+// The wall term is omitted when the store holds no anchor, so only forward-only
+// time since admission or the latest arrival counts. Restored wall anchors
+// retain silence across process restarts (D-07, D-08). An accessory missing from
+// the runtime's pushed map receives its silence verdict at the platform lookup;
+// that missing-entry rule is separate from this admitted-device measurement.
 function silenceElapsedMs(arrivedAt: number, anchor: number | undefined, monotonicNow: number, wallNow: number): number {
   const forwardOnlyElapsedMs = monotonicNow - arrivedAt;
 
@@ -228,11 +219,10 @@ function isShadowSilent(lastMessageAt: number, now: number): boolean {
 /**
  * Creates the monitoring-trust projection.
  *
- * An arrival stamp is seeded when discovery admits a device rather than when
- * the runtime is built, and the false normal the construction seed guarded is
- * still guarded by that later clock: a broker the plugin can never reach makes
- * every admitted device silent two heartbeats after the poll that found it, so
- * a shadow that never connects is never permanently trusted.
+ * Discovery admission seeds each new device's elapsed stamp and records a wall
+ * anchor only when none exists. Restored anchors are retained. A device never
+ * heard from becomes silent two heartbeats after admission, so an unreachable
+ * broker cannot leave it permanently trusted (D-05, D-07, D-08).
  *
  * Admission is the right zero and construction is not. A pump added to the
  * account an hour into the run would inherit an hour of silence it never had,

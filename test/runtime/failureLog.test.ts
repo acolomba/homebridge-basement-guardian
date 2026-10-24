@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests per-kind failure reporting, reminder cadence, recovery and silent forgetting.
+ */
+
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
@@ -5,6 +15,7 @@ import { createFailureLog, FAILURE_REMINDER_MS } from '../../src/runtime/failure
 
 import type { Clock } from '../../src/runtime/clock.js';
 import type { FailureLog } from '../../src/runtime/failureLog.js';
+import type { MonotonicClock } from '../../src/runtime/monotonicClock.js';
 import type { LogLevel, Logging } from 'homebridge';
 
 const ROTATION = 'Credential rotation';
@@ -17,12 +28,12 @@ const ONE_HOUR_MS = 3_600_000;
 
 // A clock the case moves by hand, so an hour of failures runs instantly.
 function movableClock(): { clock: Clock; advance: (ms: number) => void } {
-  let value = 1_700_000_000_000;
+  let wallTimeMs = 1_700_000_000_000;
 
   return {
-    clock: { now: () => value },
+    clock: { now: () => wallTimeMs },
     advance: (ms: number): void => {
-      value += ms;
+      wallTimeMs += ms;
     },
   };
 }
@@ -47,14 +58,22 @@ function recordingLog(recorded: string[]): Logging {
   });
 }
 
-function failureLogWith(recorded: string[], clock: Clock): FailureLog {
-  return createFailureLog({ clock, log: recordingLog(recorded), reminderIntervalMs: FAILURE_REMINDER_MS });
+function failureLogWith(recorded: string[], monotonic: MonotonicClock): FailureLog {
+  const options = { clock: monotonic, monotonic, log: recordingLog(recorded), reminderIntervalMs: FAILURE_REMINDER_MS };
+
+  return createFailureLog(options);
 }
 
 describe('FAILURE_REMINDER_MS', () => {
   test('D-14 reminds every fifteen minutes', () => {
-    // act & assert
-    assert.strictEqual(FAILURE_REMINDER_MS, 900_000);
+    // arrange
+    const expectedReminderMs = 900_000;
+
+    // act
+    const reminderMs = FAILURE_REMINDER_MS;
+
+    // assert
+    assert.strictEqual(reminderMs, expectedReminderMs);
   });
 });
 
@@ -103,6 +122,37 @@ describe('recordFailure', () => {
     assert.deepStrictEqual(recorded, [`warn ${ROTATION_REASON}`, `warn ${ROTATION_REASON}`]);
   });
 
+  test('reminds after fifteen elapsed minutes despite a backward wall-clock correction', () => {
+    // arrange
+    const recorded: string[] = [];
+    let wallTimeMs = 1_700_000_000_000;
+    let elapsedMs = 0;
+    const clock: Clock = { now: () => wallTimeMs };
+    const monotonic: MonotonicClock = { now: () => elapsedMs };
+    const options = { clock, monotonic, log: recordingLog(recorded), reminderIntervalMs: FAILURE_REMINDER_MS };
+    const failures = createFailureLog(options);
+
+    // act
+    failures.recordFailure(ROTATION, ROTATION_REASON);
+    wallTimeMs += THIRTY_SECONDS_MS;
+    elapsedMs += THIRTY_SECONDS_MS;
+    failures.recordFailure(ROTATION, ROTATION_REASON);
+    wallTimeMs -= ONE_HOUR_MS;
+    elapsedMs += FAILURE_REMINDER_MS - THIRTY_SECONDS_MS;
+    failures.recordFailure(ROTATION, ROTATION_REASON);
+    failures.recordSuccess(ROTATION);
+    failures.recordFailure(ROTATION, ROTATION_REASON);
+
+    // assert
+    assert.deepStrictEqual(recorded, [
+      `warn ${ROTATION_REASON}`,
+      `debug ${ROTATION_REASON}`,
+      `warn ${ROTATION_REASON}`,
+      `info ${ROTATION} recovered.`,
+      `warn ${ROTATION_REASON}`,
+    ]);
+  });
+
   test('restarts the reminder interval from the reminder it emitted', () => {
     // arrange
     const recorded: string[] = [];
@@ -143,6 +193,38 @@ describe('recordFailure', () => {
     const recorded: string[] = [];
     const { clock, advance } = movableClock();
     const failures = failureLogWith(recorded, clock);
+    const expectedReminderStream = [
+      'warn The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+    ];
 
     // act
     for (let elapsed = 0; elapsed < ONE_HOUR_MS; elapsed += THIRTY_SECONDS_MS) {
@@ -151,10 +233,7 @@ describe('recordFailure', () => {
     }
 
     // assert
-    assert.deepStrictEqual(
-      { warnings: recorded.filter((line) => line.startsWith('warn ')).length, reports: recorded.length },
-      { warnings: 4, reports: ONE_HOUR_MS / THIRTY_SECONDS_MS },
-    );
+    assert.deepStrictEqual(recorded, [...expectedReminderStream, ...expectedReminderStream, ...expectedReminderStream, ...expectedReminderStream]);
   });
 });
 

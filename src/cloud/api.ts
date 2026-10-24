@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Calls vendor REST routes with validated results and deadlines.
+ */
+
 import { PLUGIN_USER_AGENT } from '../settings.js';
 
 import { CloudRequestError } from './errors.js';
@@ -15,7 +24,7 @@ import type { ApiDevice, AwsCredentialsResponse, CommandResult, DeviceCommand } 
  * never retried automatically, because the command may already have been
  * delivered (D-038).
  */
-export const COMMAND_DEADLINE_MS = 2_500;
+const COMMAND_DEADLINE_MS = 2_500;
 
 /**
  * The complete set of vendor routes this version reaches, by operation.
@@ -28,7 +37,7 @@ export const COMMAND_DEADLINE_MS = 2_500;
  * A label is what a failure carries. The constructed URL never is: it holds the
  * base URL, and a device path holds the account identifier (AUTH-02).
  */
-export const ROUTES = {
+const ROUTES = {
   devices: 'GET /devices',
   device: 'GET /devices/{deviceId}',
   command: 'PUT /devices/{deviceId}/data',
@@ -64,13 +73,17 @@ interface VendorCall<T> {
   path: string;
   method: string;
   deadlineMs: number;
-  body: string | undefined;
+  body?: string;
   accepts: (value: unknown) => value is T;
 }
 
-// The identifier is opaque and is never split, parsed, or logged. Encoding it
-// keeps a character it may contain from reshaping the path (T-01-31).
+// The identifier is opaque and is never split, parsed, or logged. Dot-only URL
+// control segments are refused; other identifiers are percent-encoded (T-01-31).
 function devicePath(deviceId: string, suffix: string): string {
+  if (deviceId === '.' || deviceId === '..') {
+    throw new TypeError('Device identifier cannot be used in a request path.');
+  }
+
   return `${DEVICES_PATH}/${encodeURIComponent(deviceId)}${suffix}`;
 }
 
@@ -86,12 +99,13 @@ function unreadable(route: string, status: number): CloudRequestError {
 // allowed to escape, both because its own message quotes the first bytes of
 // that page and because a caller branching on the vendor error class would
 // otherwise fall through on it (WR-02).
-async function readBody(response: Response, route: string): Promise<unknown> {
+async function readBody(response: Response, route: string, signal: AbortSignal): Promise<unknown> {
   try {
     const body: unknown = await response.json();
 
     return body;
   } catch {
+    signal.throwIfAborted();
     throw unreadable(route, response.status);
   }
 }
@@ -99,16 +113,20 @@ async function readBody(response: Response, route: string): Promise<unknown> {
 // The status and the shape are checked in one place, so no operation can return
 // a body it did not verify. No failure carries a URL, a header value, or the
 // body itself.
-async function narrow<T>(call: VendorCall<T>, response: Response): Promise<T> {
+async function narrow<T>(call: VendorCall<T>, response: Response, signal: AbortSignal): Promise<T> {
   if (!response.ok) {
     // An error response's body is never read, so it is cancelled instead: an unconsumed body
     // otherwise leaves the underlying stream open until the connection's own teardown reaps it.
-    await response.body?.cancel();
+    try {
+      await response.body?.cancel();
+    } catch {
+      // Cleanup failure must preserve the fixed HTTP error and its sanitized fields.
+    }
 
     throw new CloudRequestError(`${call.route} failed with HTTP ${String(response.status)}.`, response.status, call.route);
   }
 
-  const body = await readBody(response, call.route);
+  const body = await readBody(response, call.route, signal);
 
   if (!call.accepts(body)) {
     throw unreadable(call.route, response.status);
@@ -152,7 +170,7 @@ async function send<T>(options: CloudApiOptions, call: VendorCall<T>, signal: Ab
   const idToken = await options.auth.idToken(deadline);
   const response = await options.httpFetch(new URL(call.path, options.baseUrl), requestInit(call.method, call.body, `Bearer ${idToken}`, deadline));
 
-  return narrow(call, response);
+  return narrow(call, response, deadline);
 }
 
 /**
@@ -168,21 +186,21 @@ async function send<T>(options: CloudApiOptions, call: VendorCall<T>, signal: Ab
 export function createCloudApi(options: CloudApiOptions): CloudApi {
   return {
     devices(signal: AbortSignal): Promise<ApiDevice[]> {
-      const call = { route: ROUTES.devices, path: DEVICES_PATH, method: 'GET', deadlineMs: options.requestTimeoutMs, body: undefined };
+      const call = { route: ROUTES.devices, path: DEVICES_PATH, method: 'GET', deadlineMs: options.requestTimeoutMs };
 
       return send(options, { ...call, accepts: isWireDeviceListResponse }, signal).then((body) => body.devices.map((device) => toApiDevice(device)));
     },
-    device(deviceId: string, signal: AbortSignal): Promise<ApiDevice> {
-      const call = { route: ROUTES.device, path: devicePath(deviceId, ''), method: 'GET', deadlineMs: options.requestTimeoutMs, body: undefined };
+    async device(deviceId: string, signal: AbortSignal): Promise<ApiDevice> {
+      const call = { route: ROUTES.device, path: devicePath(deviceId, ''), method: 'GET', deadlineMs: options.requestTimeoutMs };
 
       return send(options, { ...call, accepts: isWireDeviceResponse }, signal).then((body) => toApiDevice(body.device));
     },
     awsCredentials(signal: AbortSignal): Promise<AwsCredentialsResponse> {
-      const call = { route: ROUTES.awsCredentials, path: CREDENTIALS_PATH, method: 'GET', deadlineMs: options.requestTimeoutMs, body: undefined };
+      const call = { route: ROUTES.awsCredentials, path: CREDENTIALS_PATH, method: 'GET', deadlineMs: options.requestTimeoutMs };
 
       return send(options, { ...call, accepts: isAwsCredentialsResponse }, signal);
     },
-    sendCommand(deviceId: string, command: DeviceCommand, signal: AbortSignal): Promise<CommandResult> {
+    async sendCommand(deviceId: string, command: DeviceCommand, signal: AbortSignal): Promise<CommandResult> {
       const call = {
         route: ROUTES.command,
         path: devicePath(deviceId, COMMAND_SUFFIX),

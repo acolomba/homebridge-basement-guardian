@@ -1,22 +1,13 @@
+// SPDX-License-Identifier: MIT
+
 /**
- * @fileoverview The per-scenario world for the opt-in real-pump suite.
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Builds observation-only real-pump scenarios with the account runtime.
  *
- * This world is deliberately narrower than features/support/world.ts: it builds only the
- * plugin's own account runtime, through the same createAccountRuntimeFromConfig seam production
- * uses, and never a BasementGuardianPlatform, a DiscoveryContext, or a BasementGuardianAccessory.
- * With no HomeKit accessory layer built, there is no write handler anywhere in this suite that
- * could ever reach the runtime's command-issuing surface in the first place --
- * test/realPumpCommandBlock.test.ts proves that mechanically by scanning this file's own text
- * (T-06-15, D-04).
- *
- * Every collaborator the runtime needs is the real one: the bundled protocol constants, the real
- * system clock and monotonic clock, the real `mqtt` connect function. Only the account
- * credentials are supplied by the operator, through BG_EMAIL and BG_PASSWORD, and both are
- * registered with the redacting logger before the runtime can ever use them (T-06-17, AUTH-02).
- *
- * This world never imports features/support/world.ts. That module calls setWorldConstructor(),
- * and Before/After -- importing it here would register a second, competing World and a second
- * scenario-teardown hook into this profile's own support-code graph.
+ * Registers its own World and hooks independently of the default scenario world.
  */
 
 import { createHash, randomBytes } from 'node:crypto';
@@ -27,7 +18,6 @@ import { join } from 'node:path';
 import { After, Before, setWorldConstructor, World } from '@cucumber/cucumber';
 import { connect } from 'mqtt';
 
-import { TOKEN_CACHE_FILENAME } from '../../../src/cloud/auth.js';
 import { httpFetch } from '../../../src/cloud/httpDispatcher.js';
 import { createFamilyRegistry } from '../../../src/device/registry.js';
 import { createRedactingLogger } from '../../../src/logging.js';
@@ -35,12 +25,12 @@ import { PROTOCOL } from '../../../src/protocol.js';
 import { createAccountRuntimeFromConfig } from '../../../src/runtime/accountRuntime.js';
 import { systemClock } from '../../../src/runtime/clock.js';
 import { systemMonotonicClock } from '../../../src/runtime/monotonicClock.js';
+import { ScenarioMemory } from '../../lib/scenarioMemory.js';
 
 import type { DeviceSnapshot } from '../../../src/device/state.js';
 import type { RedactingLogger } from '../../../src/logging.js';
 import type { AccountRuntime } from '../../../src/runtime/accountRuntime.js';
 import type { MonitoringTrust } from '../../../src/runtime/monitoringHealth.js';
-import type { IWorldOptions } from '@cucumber/cucumber';
 import type { LogLevel, Logging } from 'homebridge';
 
 /** Where every scenario's scratch storage directory is created. Removed again in the After hook. */
@@ -52,9 +42,8 @@ const SALT_BYTES = 16;
 /**
  * How often the runtime polls the vendor REST inventory, in seconds.
  *
- * The lowest value CONF-05 permits, because this suite is short-lived: a scenario waits at most a
- * couple of minutes, so a long production-scale poll interval would leave most scenarios with no
- * second poll to observe at all.
+ * The lowest value CONF-05 permits. Discovery observes the startup inventory; shorter scenarios
+ * do not require a second poll. The 960-second heartbeat scenario spans later five-minute polls.
  */
 const POLL_INTERVAL_SECONDS = 300;
 
@@ -90,9 +79,9 @@ function terminalLogging(record: (line: string) => void): Logging {
     stdoutLine(level, message);
   }
 
-  const info = (message: string): void => {
+  function info(message: string): void {
     write('info', message);
-  };
+  }
 
   return Object.assign(info, {
     prefix: 'basement guardian (real-pump)',
@@ -115,7 +104,10 @@ function terminalLogging(record: (line: string) => void): Logging {
   });
 }
 
-/** The scenario state for one real-pump run, observation-only. */
+/**
+ * Provides observation-only state to one real-profile scenario's steps.
+ * Cucumber creates each instance; the live Before hook initializes it and After releases it.
+ */
 export class RealPumpWorld extends World {
   private readonly discoveredDeviceIds: string[] = [];
 
@@ -123,19 +115,15 @@ export class RealPumpWorld extends World {
 
   private readonly loggedLines: string[] = [];
 
-  private readonly deviceChangeLog: string[] = [];
-
-  private readonly watchedDeviceIds = new Set<string>();
-
-  private readonly remembered = new Map<string, unknown>();
+  private readonly remembered = new ScenarioMemory();
 
   private readonly rejectedReasons: string[] = [];
 
   // A stable bound reference, because the listener has to be removed again in cleanUp(). Recording
   // is what lets the shutdown scenario assert the absence of a rejection rather than hope the
   // process would have crashed on one (SYNC-05).
-  private readonly recordRejection = (reason: unknown): void => {
-    this.rejectedReasons.push(String(reason));
+  private readonly recordRejection = (): void => {
+    this.rejectedReasons.push('unhandled rejection');
   };
 
   private redactingLog: RedactingLogger | undefined = undefined;
@@ -148,77 +136,66 @@ export class RealPumpWorld extends World {
 
   private credentialPassword: string | undefined = undefined;
 
-  constructor(readonly options: IWorldOptions) {
-    super(options);
-    process.on('unhandledRejection', this.recordRejection);
-  }
-
-  /** Every deviceId a trustworthy inventory response has named so far, in discovery order. */
+  /** Returns device IDs named by trustworthy inventory responses, in discovery order. */
   deviceIds(): readonly string[] {
     return this.discoveredDeviceIds;
   }
 
-  /** The canonical snapshot the runtime holds for one device, or `undefined` if it holds none. */
+  /** Returns the canonical snapshot for one device, or `undefined` if none is held. */
   snapshot(deviceId: string): DeviceSnapshot | undefined {
     return this.runtime().store.snapshot(deviceId);
   }
 
-  /** Every monitoring-health summary the runtime has reported so far, in report order. */
+  /** Returns monitoring-health summaries in report order. */
   observations(): readonly string[] {
     return this.monitoringObservations;
   }
 
-  /** Every log line recorded at warn or error level, level-prefixed, in arrival order. */
+  /** Returns warn and error log lines, level-prefixed and in arrival order. */
   failureLines(): readonly string[] {
     return this.loggedLines.filter((line) => line.startsWith('warn ') || line.startsWith('error '));
   }
 
-  /** Every unhandled rejection the process reported while this scenario ran. */
+  /** Returns one non-sensitive marker per unhandled rejection observed during this scenario. */
   unhandledRejections(): readonly string[] {
     return this.rejectedReasons;
   }
 
-  /** One entry per store change the discovered device reported, naming the keys that moved. */
-  deviceChanges(): readonly string[] {
-    return this.deviceChangeLog;
-  }
-
   /** Remembers a value a step read, under a name a later step names it by. */
   remember(name: string, value: unknown): void {
-    this.remembered.set(name, value);
+    this.remembered.remember(name, value);
   }
 
-  /** The value a step remembered earlier in the scenario. */
+  /** Returns a value remembered by an earlier step in the scenario. */
   recall(name: string): unknown {
-    if (!this.remembered.has(name)) {
-      throw new Error(`no step has remembered ${name} yet`);
-    }
-
-    return this.remembered.get(name);
+    return this.remembered.recall(name);
   }
 
   /**
-   * A content fingerprint of the cached Auth0 token file, or `undefined` while it does not exist
-   * yet.
+   * Returns a content fingerprint of the cached Auth0 token file, or `undefined` while it does
+   * not exist yet.
    *
    * A fresh grant rewrites the file, and rewrites this fingerprint with it. A restart that reuses
    * the cached token leaves both untouched (AUTH-01).
    */
   async tokenCacheFingerprint(): Promise<string | undefined> {
-    const path = join(this.scratchDirectoryPath(), TOKEN_CACHE_FILENAME);
+    const path = join(this.scratchDirectoryPath(), '.basement-guardian-token.json');
 
     try {
       const contents = await readFile(path, 'utf8');
 
       return createHash('sha256').update(contents).digest('hex');
-    } catch {
-      // Not yet written is not a failure here; a step definition's own bounded wait decides when
-      // the absence has gone on too long.
-      return undefined;
+    } catch (error: unknown) {
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+        // A step definition's bounded wait decides when an absent cache has gone on too long.
+        return undefined;
+      }
+
+      throw error;
     }
   }
 
-  /** Starts the account runtime this world built in its `Before` hook. */
+  /** Starts the world's current account runtime. */
   async start(): Promise<void> {
     await this.runtime().start();
   }
@@ -234,6 +211,7 @@ export class RealPumpWorld extends World {
    */
   async restart(): Promise<void> {
     await this.stop();
+    this.discoveredDeviceIds.length = 0;
     this.accountRuntime = this.createRuntime();
     await this.start();
   }
@@ -241,9 +219,8 @@ export class RealPumpWorld extends World {
   /**
    * Builds the account runtime against the real vendor cloud, from operator-supplied credentials.
    *
-   * Building the runtime opens no connection and starts no timer; only `start()` does. Called from
-   * the `Before` hook below, kept as an instance method (rather than inline in the hook) so a
-   * `catch` block anywhere in this file never needs to spell out this world's own construction.
+   * Building the runtime opens no connection and starts no timer; only `start()` does. The live
+   * `Before` hook calls this method once per scenario.
    */
   async initialize(): Promise<void> {
     this.credentialEmail = requireEnv('BG_EMAIL');
@@ -251,23 +228,49 @@ export class RealPumpWorld extends World {
 
     this.scratchDirectory = await mkdtemp(SCRATCH_DIRECTORY_PREFIX);
 
+    this.logger().registerSecret(this.credentialEmail);
     this.logger().registerSecret(this.credentialPassword);
 
+    process.on('unhandledRejection', this.recordRejection);
     this.accountRuntime = this.createRuntime();
   }
 
   /** Stops the runtime this world built and removes its scratch directory. Runs from the `After` hook. */
   async cleanUp(): Promise<void> {
-    process.off('unhandledRejection', this.recordRejection);
-    await this.accountRuntime?.stop();
+    const failures: Error[] = [];
+
+    try {
+      await this.accountRuntime?.stop();
+    } catch (error: unknown) {
+      failures.push(new Error('real-pump runtime stop failed'));
+    }
 
     if (this.scratchDirectory !== undefined) {
-      await rm(this.scratchDirectory, { recursive: true, force: true });
+      try {
+        await rm(this.scratchDirectory, { recursive: true, force: true });
+      } catch (error: unknown) {
+        failures.push(new Error('real-pump scratch directory removal failed'));
+      }
+    }
+
+    process.off('unhandledRejection', this.recordRejection);
+
+    if (this.rejectedReasons.length > 0) {
+      failures.push(new Error('real-pump scenario observed an unhandled rejection'));
+    }
+
+    if (failures.length > 0) {
+      throw new AggregateError(failures, 'real-pump scenario release failed');
     }
   }
 
   private logger(): RedactingLogger {
-    this.redactingLog ??= createRedactingLogger({ delegate: terminalLogging((line) => this.loggedLines.push(line)), secrets: [] });
+    this.redactingLog ??= createRedactingLogger({
+      delegate: terminalLogging((line) => {
+        this.loggedLines.push(line);
+      }),
+      secrets: [],
+    });
 
     return this.redactingLog;
   }
@@ -292,12 +295,10 @@ export class RealPumpWorld extends World {
    * Builds a fresh account runtime against the real vendor cloud, over this world's scratch storage
    * directory.
    *
-   * Called from `initialize()` on the first start and from `restart()` on every one after, so a
+   * Called from `initialize()` in the `Before` hook and from `restart()` after shutdown, so a
    * restart reuses the very token cache the first runtime wrote under this directory (AUTH-01).
    */
   private createRuntime(): AccountRuntime {
-    this.watchedDeviceIds.clear();
-
     const email = this.credentialEmail;
     const password = this.credentialPassword;
 
@@ -329,11 +330,6 @@ export class RealPumpWorld extends World {
           if (!this.discoveredDeviceIds.includes(deviceId)) {
             this.discoveredDeviceIds.push(deviceId);
           }
-
-          if (!this.watchedDeviceIds.has(deviceId)) {
-            this.watchedDeviceIds.add(deviceId);
-            this.watchForChanges(deviceId);
-          }
         }
       },
       onDeviceRemoved: (deviceId: string): void => {
@@ -342,8 +338,6 @@ export class RealPumpWorld extends World {
         if (index !== -1) {
           this.discoveredDeviceIds.splice(index, 1);
         }
-
-        this.watchedDeviceIds.delete(deviceId);
       },
       onMonitoringHealth: (account: MonitoringTrust, byDevice: ReadonlyMap<string, MonitoringTrust>): void => {
         const transportReady = String(account.commandTransportReady);
@@ -352,15 +346,6 @@ export class RealPumpWorld extends World {
 
         this.monitoringObservations.push(`account transportReady=${transportReady} credentialsRejected=${credentialsRejected} devices=${deviceCount}`);
       },
-    });
-  }
-
-  // Recorded per device so a scenario can tell a natural update happened without forcing one
-  // (REL-09, D-04). Re-subscribed against every fresh runtime createRuntime() builds, since a
-  // restart's new store starts with no listeners of its own.
-  private watchForChanges(deviceId: string): void {
-    this.runtime().store.subscribe(deviceId, (_next, _previous, changedKeys) => {
-      this.deviceChangeLog.push(`${deviceId} ${changedKeys.join(' ')}`);
     });
   }
 }

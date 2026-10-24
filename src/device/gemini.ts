@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview The Gemini dual-pump system: its identity, the fields it
  * reports, and the family adapter that validates and decodes them.
@@ -99,11 +104,6 @@ const HOURS_OF_PROTECTION_VALUES: ReadonlySet<number> = new Set(PROTECTION_HOURS
 // WW-GEM-ALERT-1, -2, -3, and -11).
 const LOW_BATTERY_HEALTH_VALUES: ReadonlySet<number> = new Set([1, 2, 32]);
 
-// `undefined` names the metadata fields. No published service reads them, so a
-// violation on one is still recorded and diagnosable without deactivating
-// anything, and no member is added to `TrustScope` for them.
-type GeminiFieldScope = TrustScope | undefined;
-
 /** How one field failed, before the scope that owns it is stamped on. */
 interface FieldFault {
   field: string;
@@ -114,7 +114,10 @@ type FieldCheck = (data: Readonly<Record<string, unknown>>) => FieldFault | unde
 
 /** One field's shape check and the scope that stops being trustworthy while that field is invalid (D-04). */
 interface TelemetryCheck {
-  scope: GeminiFieldScope;
+  // `undefined` names metadata fields with no safety trust scope. Firmware feeds
+  // AccessoryInformation; a violation preserves its last valid information without
+  // deactivating a safety scope or adding a member to `TrustScope`.
+  scope: TrustScope | undefined;
   check: FieldCheck;
 }
 
@@ -193,8 +196,8 @@ const TELEMETRY_CHECKS: readonly TelemetryCheck[] = [
 ];
 
 // Every metadata field is optional: the vendor omits all four on some
-// firmware, and an absent field is not a violation. None of the four belongs to
-// a scope, because no published service reads them.
+// firmware, and an absent field is not a violation. Firmware feeds
+// AccessoryInformation, while none of these fields owns a safety trust scope.
 const METADATA_CHECKS: readonly TelemetryCheck[] = [
   { scope: undefined, check: optionalNumber('wifi_signal_dbm') },
   { scope: undefined, check: optionalString('mcu_firmware_version') },
@@ -222,9 +225,9 @@ function validate(snapshot: DeviceSnapshot): FamilyValidation {
   return violations.length === 0 ? { valid: true } : { valid: false, violations };
 }
 
-// `decode()` runs only after `validate()` confirms every field's shape, so a
-// mismatch here means that contract was broken rather than a value this
-// module should guess at.
+// `decode()` checks each scope's own fields before decoding that scope. These
+// guards refuse a field that changes type between its check and its read,
+// rather than guessing at a value from a record that stopped being stable.
 function booleanField(data: Readonly<Record<string, unknown>>, field: string): boolean {
   const value = data[field];
 
@@ -343,7 +346,7 @@ function decodeMetadata(metadata: Readonly<Record<string, unknown>>): DeviceMeta
 // The scopes at least one telemetry field stopped vouching for. Every telemetry
 // field now names one, so a violation always costs exactly the scope its own
 // field owns and never more (D-014).
-function untrustedScopesOf(data: Readonly<Record<string, unknown>>): ReadonlySet<GeminiFieldScope> {
+function untrustedScopesOf(data: Readonly<Record<string, unknown>>): ReadonlySet<TrustScope | undefined> {
   return new Set(violationsOf(TELEMETRY_CHECKS, data).map((violation) => violation.scope));
 }
 

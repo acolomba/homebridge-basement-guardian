@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Manages authentication and the token cache.
+ */
+
 import { createHash, randomBytes } from 'node:crypto';
 import { access, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -18,7 +27,7 @@ import type { Logging } from 'homebridge';
 // matches verbatim, not an endpoint this plugin contacts. Changing it to
 // https:// would break authentication. SonarCloud suppresses the same finding
 // (typescript:S5332) through the e1 entry in sonar-project.properties.
-// eslint-disable-next-line sonarjs/no-clear-text-protocols
+// eslint-disable-next-line sonarjs/no-clear-text-protocols -- Auth0 requires this opaque grant identifier verbatim; it is not a contacted endpoint.
 const GRANT_TYPE = 'http://auth0.com/oauth/grant-type/password-realm';
 const GRANT_SCOPE = 'openid profile email';
 const GRANT_ROUTE = 'POST /oauth/token';
@@ -64,9 +73,10 @@ const CACHE_UNUSABLE = 'The cached token could not be read; authenticating again
 const CACHE_OTHER_ACCOUNT = 'The cached token belongs to a different account; authenticating again.';
 const CACHE_STALE = 'The cached token is at or inside its renewal margin; authenticating again.';
 const CACHE_NOT_WRITTEN = 'The token cache could not be written; the token is held in memory only.';
+const CACHE_NOT_DELETED = 'The token cache could not be deleted; authentication remains stopped.';
 
 /** The cache file's name inside the Homebridge storage directory. */
-export const TOKEN_CACHE_FILENAME = '.basement-guardian-token.json';
+const TOKEN_CACHE_FILENAME = '.basement-guardian-token.json';
 
 /** Everything the authentication client needs, by injection. */
 export interface AuthClientOptions {
@@ -83,6 +93,8 @@ export interface AuthClientOptions {
   clock: Clock;
   /** Supplies the salt the cached fingerprint is computed over. */
   createSalt: () => string;
+  /** Supplies the complete temporary cache path when a token is written. */
+  createTemporaryPath?: (target: string) => string;
   /** Registers the granted token with the redacting logger (AUTH-02). */
   registerSecret: (secret: string) => void;
   log: Logging;
@@ -98,11 +110,17 @@ interface CachedToken {
   expiresAtMs: number;
 }
 
+interface GrantAttempt {
+  controller: AbortController;
+  token: Promise<CachedToken>;
+  waiters: number;
+}
+
 // What one client remembers about its failures: the code that stopped it for
 // good, and the kind of the last transient failure it reported.
 interface FailurePolicy {
-  haltedReason: string | undefined;
-  lastTransient: string | undefined;
+  haltedReason?: string;
+  lastTransient?: string;
 }
 
 // A failure worth trying again, described once so the log line, the error, and
@@ -132,6 +150,7 @@ function isTokenCacheFile(value: unknown): value is TokenCacheFile {
     isRecord(value) &&
     typeof value.idToken === 'string' &&
     typeof value.expiresAt === 'number' &&
+    Number.isFinite(value.expiresAt) &&
     typeof value.emailFingerprint === 'string' &&
     typeof value.salt === 'string'
   );
@@ -244,7 +263,7 @@ async function writeCachedToken(options: AuthClientOptions, token: CachedToken):
   };
 
   try {
-    await storeCache(temporaryPath(target), target, JSON.stringify(cache));
+    await storeCache((options.createTemporaryPath ?? temporaryPath)(target), target, JSON.stringify(cache));
   } catch {
     // The token itself is usable, so a cache that cannot be written costs one
     // grant on the next start rather than this one.
@@ -312,12 +331,16 @@ function reportTransient(options: AuthClientOptions, policy: FailurePolicy, fail
 function reportRecovery(options: AuthClientOptions, policy: FailurePolicy): void {
   if (policy.lastTransient !== undefined) {
     options.log.info(RECOVERED);
-    policy.lastTransient = undefined;
+    delete policy.lastTransient;
   }
 }
 
 async function deleteCachedToken(options: AuthClientOptions): Promise<void> {
-  await rm(cachePath(options), { force: true });
+  try {
+    await rm(cachePath(options), { force: true });
+  } catch {
+    options.log.debug(CACHE_NOT_DELETED);
+  }
 }
 
 async function grantFailure(options: AuthClientOptions, policy: FailurePolicy, status: number, body: unknown): Promise<Error> {
@@ -352,11 +375,17 @@ function readGrant(body: unknown, clock: Clock): CachedToken | undefined {
   const idToken = body.id_token;
   const expiresInSeconds = body.expires_in;
 
-  if (typeof idToken !== 'string' || typeof expiresInSeconds !== 'number') {
+  if (typeof idToken !== 'string' || typeof expiresInSeconds !== 'number' || !Number.isFinite(expiresInSeconds) || expiresInSeconds <= 0) {
     return undefined;
   }
 
-  return { idToken, expiresAtMs: clock.now() + expiresInSeconds * MILLISECONDS_PER_SECOND };
+  const expiresAtMs = clock.now() + expiresInSeconds * MILLISECONDS_PER_SECOND;
+
+  if (!Number.isFinite(expiresAtMs)) {
+    return undefined;
+  }
+
+  return { idToken, expiresAtMs };
 }
 
 async function fetchGrant(options: AuthClientOptions, policy: FailurePolicy, signal: AbortSignal): Promise<Response> {
@@ -393,6 +422,7 @@ async function readBody(response: Response): Promise<unknown> {
 async function requestGrant(options: AuthClientOptions, policy: FailurePolicy, signal: AbortSignal): Promise<CachedToken> {
   const response = await fetchGrant(options, policy, signal);
   const body = await readBody(response);
+  signal.throwIfAborted();
 
   if (!response.ok) {
     throw await grantFailure(options, policy, response.status, body);
@@ -413,9 +443,57 @@ async function requestGrant(options: AuthClientOptions, policy: FailurePolicy, s
 // concurrent callers can share the whole attempt rather than only its request.
 async function grantAndCache(options: AuthClientOptions, policy: FailurePolicy, signal: AbortSignal): Promise<CachedToken> {
   const granted = await requestGrant(options, policy, signal);
+  signal.throwIfAborted();
   await writeCachedToken(options, granted);
+  signal.throwIfAborted();
 
   return granted;
+}
+
+// Each caller stops waiting promptly, even when shared filesystem work or a
+// transport is still settling. Both handlers observe the shared promise after
+// cancellation, and each caller releases its place exactly once.
+function waitFor<T>(pending: Promise<T>, signal: AbortSignal, release?: (cancelled: boolean) => void): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+
+    function finish(cancelled: boolean, listener: () => void): boolean {
+      if (settled) {
+        return false;
+      }
+
+      settled = true;
+      signal.removeEventListener('abort', listener);
+      release?.(cancelled);
+
+      return true;
+    }
+
+    function abort(): void {
+      finish(true, abort);
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- AbortSignal reasons are caller-owned and must pass through unchanged.
+      reject(signal.reason);
+    }
+
+    pending.then(
+      (token) => {
+        if (finish(false, abort)) {
+          resolve(token);
+        }
+      },
+      (error: unknown) => {
+        if (finish(false, abort)) {
+          // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- Shared rejections pass unchanged, including arbitrary abort reasons.
+          reject(error);
+        }
+      },
+    );
+    signal.addEventListener('abort', abort, { once: true });
+
+    if (signal.aborted) {
+      abort();
+    }
+  });
 }
 
 /**
@@ -441,10 +519,10 @@ async function grantAndCache(options: AuthClientOptions, policy: FailurePolicy, 
  * into a thirty-day block that no restart clears.
  */
 export function createAuthClient(options: AuthClientOptions): AuthClient {
-  const policy: FailurePolicy = { haltedReason: undefined, lastTransient: undefined };
+  const policy: FailurePolicy = {};
   let cached: CachedToken | undefined;
   let cacheRead: Promise<CachedToken | undefined> | undefined;
-  let inFlight: Promise<CachedToken> | undefined;
+  let inFlight: GrantAttempt | undefined;
   let registered: string | undefined;
 
   // A caller arriving while an attempt is in flight joins it instead of opening
@@ -453,14 +531,32 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
   // it settles, so a later lapse, or a retry after a transient failure, starts
   // a fresh one.
   function sharedGrant(signal: AbortSignal): Promise<CachedToken> {
-    inFlight ??= grantAndCache(options, policy, signal).finally(() => {
-      inFlight = undefined;
-    });
+    if (inFlight === undefined) {
+      const controller = new AbortController();
+      const token = grantAndCache(options, policy, controller.signal).finally(() => {
+        inFlight = undefined;
+      });
+      inFlight = { controller, token, waiters: 0 };
+    }
 
-    return inFlight;
+    const attempt = inFlight;
+    // Keep an abandoned attempt in its slot until its request and cache work
+    // settle, so a caller during teardown cannot open a duplicate grant.
+    attempt.controller.signal.throwIfAborted();
+    attempt.waiters += 1;
+
+    return waitFor(attempt.token, signal, (cancelled) => {
+      attempt.waiters -= 1;
+
+      if (cancelled && attempt.waiters === 0) {
+        attempt.controller.abort();
+      }
+    });
   }
 
   async function currentToken(signal: AbortSignal): Promise<CachedToken> {
+    signal.throwIfAborted();
+
     if (policy.haltedReason !== undefined) {
       throw new AuthHaltedError(HALTED, policy.haltedReason);
     }
@@ -468,7 +564,9 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
     // The read is shared rather than flagged, so a second caller waits for the
     // answer instead of seeing an empty cache and stepping around it (WR-04).
     cacheRead ??= readCachedToken(options);
-    cached ??= await cacheRead;
+    const stored = await waitFor(cacheRead, signal);
+    signal.throwIfAborted();
+    cached ??= stored;
 
     if (cached !== undefined && isCurrent(cached.expiresAtMs, options.clock)) {
       return cached;
@@ -479,7 +577,9 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
 
   return {
     async idToken(signal: AbortSignal): Promise<string> {
-      cached = await currentToken(signal);
+      const token = await currentToken(signal);
+      signal.throwIfAborted();
+      cached = token;
 
       // A bearer token is credential material the moment it is in hand,
       // whether it was granted or read back from the cache. It is registered

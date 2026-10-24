@@ -5,7 +5,7 @@
  * `D-035` splits this repository's licensing between template-derived Apache-2.0 files and
  * original MIT-licensed work. LICENSE and NOTICE are the two files that carry that boundary
  * to a reader; this gate reads their raw text and asserts each says what it must, the same
- * "read the file, assert the text" pattern the packaging and HAP-import gates already use.
+ * "read the file, assert the text" pattern the packaging gates already use.
  *
  * The per-file gate below extends that same pattern to the classification itself: every
  * `src/*.ts` file carries a first-line SPDX identifier naming which of the two licenses
@@ -54,8 +54,7 @@ const APACHE_DERIVED_FILES: readonly string[] = ['src/index.ts', 'src/settings.t
 // every file the classification actually covers.
 const SRC_FILE_FLOOR = 42;
 
-// Repository-relative and POSIX-separated, mirroring test/accessories/hapImportScope.test.ts's
-// own typeScriptFilesUnder() so a failing assertion names a path an author can open.
+// Repository-relative and POSIX-separated so a failing assertion names a path an author can open.
 function typeScriptFilesUnder(relativeDirectory: string): readonly string[] {
   return readdirSync(join(REPOSITORY_ROOT, relativeDirectory), { withFileTypes: true }).flatMap((entry) => {
     const path = `${relativeDirectory}/${entry.name}`;

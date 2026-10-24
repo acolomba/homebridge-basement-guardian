@@ -1,19 +1,24 @@
 // SPDX-License-Identifier: MIT
+
 /**
- * @fileoverview When each system was last heard from, read on wall time and
- * kept across restarts.
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Stores wall-clock arrival anchors across restarts.
  *
  * The forward-only base the silence window is primarily measured on restarts
  * with the process. Without a second term that survives a restart, a bridge
  * restarted after a pump has been quiet for hours starts that pump's window
  * again from zero and hands it a fresh certificate of health -- the same false
  * normal a backwards wall-clock jump makes, on a slower clock. This store keeps
- * the wall reading of each device's last arrival so the clamp in
- * `monitoringHealth.ts` has a second term to take the larger of (D-07, D-08).
+ * the wall reading from initial admission or each device's last arrival, so
+ * `monitoringHealth.ts` can compare wall and elapsed silence (D-07, D-08).
  *
- * It holds vendor `deviceId`s and millisecond timestamps and nothing else: no
- * credential, no token, no email, no account identifier, and no local-network
- * value.
+ * Stores vendor `deviceId` keys and millisecond timestamps. Each device ID
+ * contains an account identifier and hardware serial (C-002). Existing local
+ * persistence permission rests on the unconfirmed premise that the account
+ * component is an opaque key. Public artifacts must sanitize device IDs.
  *
  * The store owns the map and the two disk calls, and it owns no timer and reads
  * no clock. The runtime decides when to restore and when to persist, which is
@@ -44,6 +49,8 @@ export interface ArrivalAnchorsOptions {
   /** The Homebridge storage directory; the anchor file lives there and nowhere else. */
   storagePath: string;
   log: Logging;
+  /** Trusted adapter dependency supplying a complete temporary path; uses native naming when absent. */
+  temporaryPath?: (target: string) => string;
 }
 
 /**
@@ -55,16 +62,14 @@ export interface ArrivalAnchorsOptions {
  */
 export interface ArrivalAnchors {
   /**
-   * When this device was last heard from on wall time, absent when nothing was
-   * ever stored for it.
+   * Returns the stored wall-clock anchor, or undefined when none is held.
    *
-   * Absent is the ordinary state of a fresh install rather than an error: an
-   * installation from before this release carries no anchor at all, so there is
-   * nothing to migrate from and the seeding path is the only one that has ever
-   * existed. An absent anchor is never read as a recent arrival (D-08).
+   * The runtime restores anchors before discovery admission. Admission seeds
+   * only an absent anchor and retains a restored one. Actual shadow arrivals
+   * advance the device's anchor (D-07, D-08).
    */
   get(deviceId: string): number | undefined;
-  /** Records when this device was heard from, on wall time. */
+  /** Records a wall-clock anchor for admission or an actual arrival. */
   record(deviceId: string, at: number): void;
   /** Drops a removed device's anchor, so the stored set cannot outgrow the account. */
   forget(deviceId: string): void;
@@ -80,10 +85,10 @@ function anchorPath(options: ArrivalAnchorsOptions): string {
 
 // The anchor file is untrusted input like any other stored JSON, so it is
 // narrowed by a hand-written predicate rather than assumed. Each entry is
-// checked with `typeof` and never for truthiness: a zero anchor is a legal
-// value, and `JSON.stringify` turns a non-finite number into `null`.
+// checked for a finite number, never for truthiness: a zero anchor is legal,
+// and an overflow JSON number can parse as infinity.
 function isAnchorFile(value: unknown): value is Record<string, number> {
-  return isRecord(value) && Object.values(value).every((anchor) => typeof anchor === 'number');
+  return isRecord(value) && Object.values(value).every((anchor) => typeof anchor === 'number' && Number.isFinite(anchor));
 }
 
 async function parseAnchorFile(path: string): Promise<unknown> {
@@ -140,12 +145,9 @@ function temporaryPath(target: string): string {
 // a file another writer holds, and a rename that fails takes the fresh file with
 // it rather than stranding it in the storage directory.
 //
-// One thing is deliberately not copied from the token cache this write is
-// modelled on: its owner-only mode. That mode exists because a bearer token must
-// not be readable by every local user (AUTH-02). This file holds vendor
-// `deviceId`s and millisecond timestamps, and the `deviceId` is the value this
-// project has ruled non-sensitive, so the constant's justification does not
-// reach here and it is not carried over for the look of the thing.
+// The write uses the default file mode under the scoped deviceId persistence
+// permission. This permission rests on the unconfirmed premise that the account
+// component is an opaque key. Public artifacts must sanitize these IDs.
 async function storeAnchors(temporary: string, target: string, contents: string): Promise<void> {
   await writeFile(temporary, contents, { flag: 'wx' });
 
@@ -165,9 +167,10 @@ async function storeAnchors(temporary: string, target: string, contents: string)
  * the disk, and neither raises.
  */
 export function createArrivalAnchors(options: ArrivalAnchorsOptions): ArrivalAnchors {
-  // One anchor per device, absent until a stored file supplied one or something
-  // was heard from it.
+  // One anchor per device, supplied by restore, admission or an actual arrival.
   const anchors = new Map<string, number>();
+  // Keep renames to the shared target in persist-call order.
+  let pendingWrite = Promise.resolve();
 
   return {
     get(deviceId: string): number | undefined {
@@ -196,15 +199,20 @@ export function createArrivalAnchors(options: ArrivalAnchorsOptions): ArrivalAnc
 
     async persist(): Promise<void> {
       const target = anchorPath(options);
+      const snapshot = Object.fromEntries(anchors);
 
-      try {
-        await storeAnchors(temporaryPath(target), target, JSON.stringify(Object.fromEntries(anchors)));
-      } catch {
-        // A stale anchor is the safe direction -- the clamp can only ever report
-        // silence sooner, never later -- so a write that did not land costs
-        // nothing an owner is harmed by, and it must not stop the runtime.
-        options.log.debug(ANCHORS_NOT_WRITTEN);
-      }
+      const writing = pendingWrite.then(async () => {
+        try {
+          await storeAnchors((options.temporaryPath ?? temporaryPath)(target), target, JSON.stringify(snapshot));
+        } catch {
+          // A stale anchor is the safe direction -- the clamp can only ever report
+          // silence sooner, never later -- so a write that did not land costs
+          // nothing an owner is harmed by, and it must not stop the runtime.
+          options.log.debug(ANCHORS_NOT_WRITTEN);
+        }
+      });
+      pendingWrite = writing;
+      await writing;
     },
   };
 }

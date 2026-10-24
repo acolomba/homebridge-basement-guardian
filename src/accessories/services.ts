@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview The services one accessory publishes, and how each one is keyed.
  *
@@ -7,14 +12,16 @@
  * notification the user attached to it. The subtypes named here are therefore
  * part of the plugin's user-facing contract from the first release.
  *
- * The stable subtype strings themselves arrive with the accessory adapters, as
- * an `as const` object that derives its union from these types. A `const enum`
- * is not an option: the style rules ban it, and Node rejects an enum when it
- * strips types rather than compiling them.
+ * Each published service's subtype is its `ServiceKind` slug verbatim, so the
+ * string unions below are the subtype strings. A `const enum` is not an
+ * option: the style rules ban it, and Node rejects an enum when it strips
+ * types rather than compiling them.
  *
  * The removable notification names appear twice, once as a type and once as a
- * runtime list, because an administrator supplies them as text: the
- * configuration check and the shipped settings form both read them at run time.
+ * runtime list, because an administrator supplies them as text. The
+ * configuration check reads the runtime list. The settings form reads its own
+ * enum in `config.schema.json`, a separate alphabetical list of the same seven
+ * names.
  */
 
 /**
@@ -53,9 +60,10 @@ export type NotificationServiceKind =
 /**
  * The removable notification names, in the order the type declares them.
  *
- * This is the one runtime source the configuration refusal and the shipped
- * settings-form enum both trace to, so neither can offer a name the type does
- * not declare.
+ * Its element type makes every entry a name the type declares. The
+ * configuration check refuses any supplied name that is not in this list. The
+ * settings form does not read it: `config.schema.json` holds its own
+ * alphabetical enum of the same seven names.
  */
 export const NOTIFICATION_SERVICE_KINDS: readonly NotificationServiceKind[] = [
   'backup-pump-running',

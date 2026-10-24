@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview Holds the hand-built HAP stand-in's write path against the HAP the plugin runs on.
  *
@@ -6,7 +12,7 @@
  * every HomeKit type comes from the injected `api.hap` namespace, and nothing here relaxes that.
  *
  * The exception exists because without it every write semantic this plugin relies on is one the
- * plugin itself authored. `features/support/fakeHap.ts` has the only `Switch`, `On`, `onSet` and
+ * plugin itself authored. `features/lib/hap.ts` has the only `Switch`, `On`, `onSet` and
  * status code the scenarios ever see, so a green suite over that stand-in would prove that the
  * stand-in agrees with itself and nothing more. The cases below run the same write script against
  * the real pinned package and against the stand-in and assert the two records are deep-equal, so a
@@ -22,9 +28,9 @@ import { test } from 'node:test';
 
 import { Characteristic, Formats, HAPStatus, HapStatusError, Perms, Service } from '@homebridge/hap-nodejs';
 
-import { createFakeHap } from '../../features/support/fakeHap.js';
+import { createFakeHap } from '../../features/lib/hap.js';
 
-import type { FakeHapService } from '../../features/support/fakeHap.js';
+import type { FakeHapService } from '../../features/lib/hap.js';
 import type { CharacteristicProps } from '@homebridge/hap-nodejs';
 
 const HAP_SPECIFIER = '@homebridge/hap-nodejs';
@@ -48,7 +54,7 @@ const MANIFEST_SEARCH_DEPTH = 4;
 
 const FAKE = createFakeHap();
 
-const require_ = createRequire(import.meta.url);
+const testRequire = createRequire(import.meta.url);
 
 /** One write or read, as both implementations report it. */
 interface WriteRecord {
@@ -60,7 +66,7 @@ interface WriteRecord {
 /** The write surface both implementations answer, so one script drives each in turn. */
 interface WriteSubject {
   /** Registers the one write handler this characteristic answers through. */
-  onSet(handler: () => Promise<void>): void;
+  onSet(handler: (value: unknown) => Promise<void>): void;
   /** Drives a controller write and answers what it left behind. */
   set(value: boolean): Promise<WriteRecord>;
   /** Drives a controller read and answers what it left behind. */
@@ -83,15 +89,44 @@ interface WriteSubject {
 }
 
 interface InstalledManifest {
-  name?: string;
-  version?: string;
+  name: string;
+  version: string;
   dependencies?: Readonly<Record<string, string>>;
 }
 
 function readManifest(path: string): InstalledManifest {
   const manifest: unknown = JSON.parse(readFileSync(path, 'utf8'));
 
-  return manifest as InstalledManifest;
+  if (
+    typeof manifest !== 'object' ||
+    manifest === null ||
+    Array.isArray(manifest) ||
+    !('name' in manifest) ||
+    typeof manifest.name !== 'string' ||
+    !('version' in manifest) ||
+    typeof manifest.version !== 'string'
+  ) {
+    throw new Error(`invalid installed manifest at ${path}`);
+  }
+
+  let dependencies: Record<string, string> | undefined;
+  if ('dependencies' in manifest) {
+    const declared = manifest.dependencies;
+    if (typeof declared !== 'object' || declared === null || Array.isArray(declared)) {
+      throw new Error(`invalid installed dependencies at ${path}`);
+    }
+
+    dependencies = {};
+    for (const [specifier, version] of Object.entries(declared)) {
+      if (typeof version !== 'string') {
+        throw new Error(`invalid installed dependency ${specifier} at ${path}`);
+      }
+
+      dependencies[specifier] = version;
+    }
+  }
+
+  return dependencies === undefined ? { name: manifest.name, version: manifest.version } : { name: manifest.name, version: manifest.version, dependencies };
 }
 
 // The manifest that owns a resolved entry point, found by walking up from it rather than by a fixed
@@ -109,8 +144,10 @@ function manifestOwning(entryPath: string, name: string): InstalledManifest {
       if (manifest.name === name) {
         return manifest;
       }
-    } catch {
-      // Not every directory on the way up carries a manifest; the walk continues.
+    } catch (error: unknown) {
+      if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) {
+        throw error;
+      }
     }
 
     directory = dirname(directory);
@@ -164,10 +201,6 @@ function realSubject(): WriteSubject {
 function fakeCharacteristicOf(service: FakeHapService): { value: unknown; statusCode: number; handleSetRequest: (value: unknown) => Promise<void> } {
   const characteristic = service.getCharacteristic(FAKE.Characteristic.On);
 
-  if (characteristic === undefined) {
-    throw new Error('the stand-in Switch carries no On characteristic');
-  }
-
   return characteristic;
 }
 
@@ -178,10 +211,10 @@ function fakeSubject(): WriteSubject {
 
   return {
     onSet(handler) {
-      service.getCharacteristic(FAKE.Characteristic.On)?.onSet(handler);
+      service.getCharacteristic(FAKE.Characteristic.On).onSet(handler);
     },
     set: (value) => recorded(read, () => characteristic.handleSetRequest(value)),
-    get: () => recorded(read, () => Promise.resolve(service.getCharacteristic(FAKE.Characteristic.On)?.handleGetRequest())),
+    get: () => recorded(read, () => Promise.resolve(service.getCharacteristic(FAKE.Characteristic.On).handleGetRequest())),
     pushOn(value) {
       service.updateCharacteristic(FAKE.Characteristic.On, value);
     },
@@ -198,9 +231,9 @@ function fakeSubject(): WriteSubject {
 // One write script, run against each implementation in turn. Neither record is the expected value:
 // the assertion is that the two agree, so a semantic the stand-in got wrong would have to be wrong
 // the same way in the real HAP source, which is the point of comparing rather than restating.
-type WriteScript = (subject: WriteSubject, refuse: (status: number) => Error) => Promise<WriteRecord>;
+type WriteScript<T> = (subject: WriteSubject, refuse: (status: number) => Error) => Promise<T>;
 
-async function bothRecords(script: WriteScript): Promise<{ real: WriteRecord; fake: WriteRecord }> {
+async function bothRecords<T>(script: WriteScript<T>): Promise<{ real: T; fake: T }> {
   const real = await script(realSubject(), (status) => new HapStatusError(status));
   const fake = await script(fakeSubject(), (status) => new FAKE.HapStatusError(status));
 
@@ -240,32 +273,46 @@ test('clamps a count past 255 on the narrow numeric format and keeps it whole on
 
 test('D-17 resolves the same HAP file the plugin host itself resolves', () => {
   // arrange
-  const homebridgeRequire = createRequire(require_.resolve(HOMEBRIDGE_SPECIFIER));
+  const homebridgeRequire = createRequire(testRequire.resolve(HOMEBRIDGE_SPECIFIER));
 
   // act
-  const resolved = { here: require_.resolve(HAP_SPECIFIER), throughTheHost: homebridgeRequire.resolve(HAP_SPECIFIER) };
+  const resolved = { here: testRequire.resolve(HAP_SPECIFIER), throughTheHost: homebridgeRequire.resolve(HAP_SPECIFIER) };
 
   // assert
   assert.strictEqual(resolved.here, resolved.throughTheHost);
 });
 
-// Homebridge 1.x depends on the legacy unscoped `hap-nodejs` package (versions
-// 0.12.0/0.14.3, confirmed against the npm registry); only Homebridge 2.x
-// depends on the scoped `@homebridge/hap-nodejs` line this project pins and
-// this file tests against. The two lines share no version to compare, so this
-// case is registered only once the host has migrated to the scoped package --
-// a Homebridge 1.x run has nothing here to assert against.
-const hapVersionTheHostDeclares = manifestOwning(require_.resolve(HOMEBRIDGE_SPECIFIER), HOMEBRIDGE_SPECIFIER).dependencies?.[HAP_SPECIFIER];
+// Homebridge 1.x declares the legacy unscoped package; Homebridge 2.x declares the scoped line
+// this file imports. The major versions have different package names and cannot share a version
+// assertion.
+test('D-17 checks the HAP package declared by the plugin host', () => {
+  // arrange
+  const host = manifestOwning(testRequire.resolve(HOMEBRIDGE_SPECIFIER), HOMEBRIDGE_SPECIFIER);
+  const scopedVersion = host.dependencies?.[HAP_SPECIFIER];
+  const legacyVersion = host.dependencies?.['hap-nodejs'];
 
-if (hapVersionTheHostDeclares !== undefined) {
-  test('D-17 runs against the HAP version the plugin host declares', () => {
-    // arrange
-    const installed = readManifest(require_.resolve(`${HAP_SPECIFIER}/package.json`));
+  // act
+  const hostMajor = host.version.split('.')[0];
 
-    // act & assert
-    assert.strictEqual(installed.version, hapVersionTheHostDeclares);
-  });
-}
+  // assert
+  if (hostMajor === '1') {
+    assert.strictEqual(scopedVersion, undefined);
+    assert.match(legacyVersion ?? '', /^\S+$/);
+
+    return;
+  }
+
+  if (hostMajor === '2') {
+    const installed = readManifest(testRequire.resolve(`${HAP_SPECIFIER}/package.json`));
+    assert.strictEqual(installed.name, HAP_SPECIFIER);
+    assert.strictEqual(scopedVersion, installed.version);
+    assert.strictEqual(legacyVersion, undefined);
+
+    return;
+  }
+
+  assert.fail(`unsupported Homebridge version ${host.version}`);
+});
 
 test('stores the value and clears the status on an accepted write, on both implementations', async () => {
   // act
@@ -278,6 +325,96 @@ test('stores the value and clears the status on an accepted write, on both imple
   // assert
   assert.deepStrictEqual(real, fake);
   assert.deepStrictEqual(real, { rejectedWith: undefined, value: true, statusCode: 0 });
+});
+
+test('delivers requested values to onSet in order, on both implementations', async () => {
+  // arrange
+  const expectedRequestedValues = [true, false];
+
+  // act
+  const { real, fake } = await bothRecords(async (subject) => {
+    const requestedValues: unknown[] = [];
+    subject.pushOn(false);
+    subject.onSet((value) => {
+      requestedValues.push(value);
+      return Promise.resolve();
+    });
+    await subject.set(true);
+    await subject.set(false);
+
+    return requestedValues;
+  });
+
+  // assert
+  assert.deepStrictEqual(real, fake);
+  assert.deepStrictEqual(real, expectedRequestedValues);
+});
+
+test('stores a write without a handler, on both implementations', async () => {
+  // act
+  const { real, fake } = await bothRecords(async (subject) => {
+    subject.pushOn(true);
+
+    return subject.set(false);
+  });
+
+  // assert
+  assert.deepStrictEqual(real, fake);
+  assert.deepStrictEqual(real, { rejectedWith: undefined, value: false, statusCode: 0 });
+});
+
+test('uses the latest onSet handler for a write, on both implementations', async () => {
+  // act
+  const { real, fake } = await bothRecords(async (subject, refuse) => {
+    subject.pushOn(false);
+    subject.onSet(() => Promise.reject(refuse(HAPStatus.NOT_ALLOWED_IN_CURRENT_STATE)));
+    subject.onSet(() => Promise.resolve());
+
+    return subject.set(true);
+  });
+
+  // assert
+  assert.deepStrictEqual(real, fake);
+  assert.deepStrictEqual(real, { rejectedWith: undefined, value: true, statusCode: 0 });
+});
+
+test('clears a refused status while the next write is pending, on both implementations', async () => {
+  // arrange
+  const expectedRecords = {
+    prior: { rejectedWith: HAPStatus.RESOURCE_BUSY, value: true, statusCode: HAPStatus.RESOURCE_BUSY },
+    inFlight: {
+      stored: { rejectedWith: undefined, value: true, statusCode: 0 },
+      read: { rejectedWith: undefined, value: true, statusCode: 0 },
+    },
+    settled: { rejectedWith: undefined, value: false, statusCode: 0 },
+  };
+
+  // act
+  const { real, fake } = await bothRecords(async (subject, refuse) => {
+    subject.pushOn(true);
+    subject.onSet(() => Promise.reject(refuse(HAPStatus.RESOURCE_BUSY)));
+    const prior = await subject.set(false);
+    let releaseWrite: () => void = () => {
+      throw new Error('the pending write handler was not entered');
+    };
+
+    subject.onSet(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseWrite = resolve;
+        }),
+    );
+
+    const writing = subject.set(false);
+    const inFlight = { stored: subject.read(), read: await subject.get() };
+    releaseWrite();
+
+    return { prior, inFlight, settled: await writing };
+  });
+
+  // assert
+  assert.deepStrictEqual(real, fake);
+  assert.deepStrictEqual(real, expectedRecords);
 });
 
 // The held value is pushed to `true` first, deliberately away from the `bool` format default. A
@@ -331,6 +468,38 @@ test('answers the stored status to a read issued after a refusal, on both implem
   // assert
   assert.deepStrictEqual(real, fake);
   assert.deepStrictEqual(real, { rejectedWith: HAPStatus.RESOURCE_BUSY, value: true, statusCode: HAPStatus.RESOURCE_BUSY });
+});
+
+test('returns a rejecting promise for a refused read, on both implementations', async () => {
+  // arrange
+  const realService = new Service.Switch(SWITCH_NAME, SWITCH_SUBTYPE);
+  const realOn = realService.getCharacteristic(Characteristic.On);
+  const fakeService = new FAKE.Service.Switch(SWITCH_NAME, SWITCH_SUBTYPE);
+  const fakeOn = fakeService.getCharacteristic(FAKE.Characteristic.On);
+
+  realOn.onSet(() => Promise.reject(new HapStatusError(HAPStatus.RESOURCE_BUSY)));
+  fakeOn.onSet(() => Promise.reject(new FAKE.HapStatusError(HAPStatus.RESOURCE_BUSY)));
+  const realWriteStatus: unknown = await realOn.handleSetRequest(true).then(
+    () => undefined,
+    (status: unknown) => status,
+  );
+  const fakeWriteStatus: unknown = await fakeOn.handleSetRequest(true).then(
+    () => undefined,
+    (status: unknown) => status,
+  );
+
+  // act
+  const reads = [realOn.handleGetRequest(), fakeOn.handleGetRequest()];
+
+  // assert
+  assert.deepStrictEqual([realWriteStatus, fakeWriteStatus], [HAPStatus.RESOURCE_BUSY, HAPStatus.RESOURCE_BUSY]);
+  for (const read of reads) {
+    assert.ok(read instanceof Promise);
+    await assert.rejects(read, (status: unknown) => {
+      assert.deepStrictEqual(status, HAPStatus.RESOURCE_BUSY);
+      return true;
+    });
+  }
 });
 
 test('returns the stored status to zero on a push of the value already held, on both implementations', async () => {
@@ -391,8 +560,11 @@ test('survives a push queued as a microtask inside the handler, on both implemen
 
   // assert
   assert.deepStrictEqual(real, fake);
-  assert.notStrictEqual(real.statusCode, 0);
-  assert.strictEqual(real.statusCode, HAPStatus.NOT_ALLOWED_IN_CURRENT_STATE);
+  assert.deepStrictEqual(real, {
+    rejectedWith: undefined,
+    value: true,
+    statusCode: HAPStatus.NOT_ALLOWED_IN_CURRENT_STATE,
+  });
 });
 
 // The push path that makes a characteristic unreadable, which is the one act the credential-rejection
@@ -472,25 +644,6 @@ test('leaves a pushed status on On when StatusActive is pushed, on both implemen
   // assert
   assert.deepStrictEqual(real, fake);
   assert.deepStrictEqual(real, { rejectedWith: undefined, value: true, statusCode: HAPStatus.OPERATION_TIMED_OUT });
-});
-
-// `pushed` has no real counterpart to compare against: the real HAP carries no such member, and the
-// stand-in carries it to tell a value the plugin wrote from one HAP constructed. An error is not a
-// value the plugin published, so an error push must leave the flag where it was -- otherwise every
-// step reading through `pushedValue` would start reading a format default as a published one.
-test('leaves the stand-in published flag where it was when an error is pushed', () => {
-  // arrange
-  const service = new FAKE.Service.Switch(SWITCH_NAME, SWITCH_SUBTYPE);
-  const statusActive = service.addCharacteristic(FAKE.Characteristic.StatusActive);
-
-  // act
-  service.updateCharacteristic(FAKE.Characteristic.StatusActive, new FAKE.HapStatusError(FAKE.HAPStatus.SERVICE_COMMUNICATION_FAILURE));
-
-  // assert
-  assert.deepStrictEqual(
-    { pushed: statusActive.pushed, statusCode: statusActive.statusCode },
-    { pushed: false, statusCode: FAKE.HAPStatus.SERVICE_COMMUNICATION_FAILURE },
-  );
 });
 
 // The stand-in every other test in this repository declares its characteristics against. A format

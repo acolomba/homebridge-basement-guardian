@@ -16,7 +16,7 @@ test: Press Alarm Mute (via the Home app's Alarm Mute switch, or via the vendor 
 
 expected: A record of what the device/cloud actually does between the press and the reported change: nothing observable, a distinct accept message, or something else. State it plainly, including "no separate acknowledgement observed" as a valid, complete answer.
 
-why_human: No fake can answer this -- the Cucumber fake-pump harness's `fakeShadowBroker.ts` answers the way this project's engineers designed it to answer, not the way a real Gemini answers. Confirming or refuting the fake's shape requires a real device.
+why_human: No fake can answer this -- the Cucumber fake-pump harness's `features/lib/shadowBroker.ts` answers the way this project's engineers designed it to answer, not the way a real Gemini answers. Confirming or refuting the fake's shape requires a real device.
 
 status: pending
 

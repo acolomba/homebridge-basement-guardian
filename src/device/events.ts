@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview Transient device occurrences, derived from consecutive canonical
  * snapshots.
@@ -18,7 +23,7 @@
 export interface DeviceEventBase {
   /** The vendor identifier of the device the occurrence belongs to. */
   deviceId: string;
-  /** Local time the plugin derived the occurrence. Never a device time. */
+  /** Local time the plugin derived the occurrence, in milliseconds. */
   observedAt: number;
 }
 
@@ -27,7 +32,7 @@ export interface PrimaryPumpStarted extends DeviceEventBase {
   type: 'primary-pump-started';
 }
 
-/** The backup pump began running, which means the primary pump did not cope. */
+/** The backup pump began running. */
 export interface BackupPumpStarted extends DeviceEventBase {
   type: 'backup-pump-started';
 }
@@ -45,7 +50,7 @@ export interface SelfTestStarted extends DeviceEventBase {
  */
 export interface BackupPumpActivationRecovered extends DeviceEventBase {
   type: 'backup-pump-activation-recovered';
-  /** Device time of the activation, as the device reported it. */
+  /** Device Unix seconds of the activation, carried through unconverted. */
   deviceTimestamp: number;
 }
 

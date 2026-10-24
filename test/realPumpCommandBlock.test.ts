@@ -4,8 +4,7 @@
  * D-04 requires every command path hard-blocked in the test transport itself, not left to
  * operator discipline. features/real-pump/support/realWorld.ts builds no HomeKit accessory layer
  * at all, so there is no write handler anywhere in the suite that could ever reach a CommandPort
- * in the first place -- this test proves that mechanically, mirroring
- * test/accessories/hapImportScope.test.ts's static source-text gate, by scanning every file under
+ * in the first place -- this test proves that mechanically by scanning every file under
  * features/real-pump/ for the three substrings that would prove otherwise (T-06-15).
  */
 

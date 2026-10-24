@@ -1,0 +1,771 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview The one hand-built HAP namespace stand-in.
+ *
+ * This is a stand-in rather than the real `@homebridge/hap-nodejs`, matching every other external
+ * boundary in this codebase. It answers the members the plugin reads, with the real argument
+ * orders, duplicate refusals, and format defaults. It also carries harness-only publication state
+ * and cache serialization; it is not a reimplementation of HAP-NodeJS. There is exactly one in the
+ * repository, because two stand-ins of one boundary drift apart silently. That drift can leave a
+ * green test over broken production behavior.
+ *
+ * The plugin declares its own HomeKit types by subclassing the injected namespace. Therefore,
+ * `Service` and `Characteristic` are constructible base classes here, not identifier constants.
+ *
+ * This module imports `@homebridge/hap-nodejs` nowhere, and neither does any other module the
+ * plugin ships. The package is an explicit development dependency pinned at the version the
+ * plugin host itself pins, and exactly one file imports it: `test/accessories/hapWriteFidelity.test.ts`,
+ * which runs the same write cases against the real package and against this stand-in and asserts
+ * the two agree. That file exists to hold this one honest -- without it every write semantic the
+ * controls rely on would be one this stand-in invented, and a green suite would prove only that the
+ * stand-in agrees with itself. The rule it excepts is a runtime rule and is unchanged: no module
+ * under `src/` reaches HAP-NodeJS directly, and every HomeKit type comes from the injected
+ * `api.hap` namespace (D-17, SAFE-08).
+ */
+
+import { createHash } from 'node:crypto';
+
+// Every type Apple assigns lives in one namespace, so a standard identifier is its own short prefix
+// completed by this suffix.
+const APPLE_BASE_UUID = '-0000-1000-8000-0026BB765291';
+
+// The four string characteristics the real HAP answers a named default for, keyed by identifier as
+// the real switch keys on. Every other string characteristic starts at the empty string. The
+// definitions below carry the same identifiers, and a scenario reads all four back, so the two lists
+// cannot drift apart unnoticed.
+const NAMED_STRING_DEFAULTS: ReadonlyMap<string, string> = new Map([
+  [`00000020${APPLE_BASE_UUID}`, 'Default-Manufacturer'],
+  [`00000021${APPLE_BASE_UUID}`, 'Default-Model'],
+  [`00000030${APPLE_BASE_UUID}`, 'Default-SerialNumber'],
+  [`00000052${APPLE_BASE_UUID}`, '0.0.0'],
+]);
+
+/** The characteristic formats this stand-in answers, carrying the values the real enum carries. */
+export interface FakeFormats {
+  readonly BOOL: string;
+  readonly UINT8: string;
+  readonly UINT32: string;
+  readonly STRING: string;
+  readonly FLOAT: string;
+}
+
+/** The characteristic permissions this stand-in answers, carrying the values the real enum carries. */
+export interface FakePerms {
+  readonly PAIRED_READ: string;
+  readonly PAIRED_WRITE: string;
+  readonly NOTIFY: string;
+}
+
+/** The characteristic units this stand-in answers, carrying the values the real enum carries. */
+export interface FakeUnits {
+  readonly PERCENTAGE: string;
+}
+
+/**
+ * The HAP status codes a write path answers, carrying the values the real enum carries.
+ *
+ * Only the statuses this plugin can answer are declared. `test/accessories/hapWriteFidelity.test.ts`
+ * reads each one off both namespaces and asserts the pairs are equal, so a drifted number fails
+ * there rather than in a scenario that would still have looked green.
+ */
+export interface FakeHapStatus {
+  readonly SUCCESS: number;
+  readonly SERVICE_COMMUNICATION_FAILURE: number;
+  readonly RESOURCE_BUSY: number;
+  readonly OPERATION_TIMED_OUT: number;
+  readonly NOT_ALLOWED_IN_CURRENT_STATE: number;
+}
+
+/** The deterministic accessory-identifier derivation a scenario reads back. */
+export interface FakeUuid {
+  generate(data: string): string;
+}
+
+const FORMATS: FakeFormats = { BOOL: 'bool', UINT8: 'uint8', UINT32: 'uint32', STRING: 'string', FLOAT: 'float' };
+const PERMS: FakePerms = { PAIRED_READ: 'pr', PAIRED_WRITE: 'pw', NOTIFY: 'ev' };
+const UNITS: FakeUnits = { PERCENTAGE: 'percentage' };
+const HAP_STATUS: FakeHapStatus = {
+  SUCCESS: 0,
+  SERVICE_COMMUNICATION_FAILURE: -70402,
+  RESOURCE_BUSY: -70403,
+  OPERATION_TIMED_OUT: -70408,
+  NOT_ALLOWED_IN_CURRENT_STATE: -70412,
+};
+
+const FIRST_HAP_ERROR = -70401;
+
+function normalizeHapError(status: number): number {
+  return status >= HAP_STATUS.NOT_ALLOWED_IN_CURRENT_STATE && status <= FIRST_HAP_ERROR ? status : HAP_STATUS.SERVICE_COMMUNICATION_FAILURE;
+}
+
+/**
+ * One refused write, carrying the status the handler named.
+ *
+ * `hapStatus` is the one member `handleSetRequest` reads. A bare number also names a status; other
+ * thrown values become communication failures. The class implementing it is module-local, so
+ * callers construct one through `hap.HapStatusError`, as the plugin does through the injected
+ * namespace. No test reaches a HAP type by a route production does not have.
+ */
+export interface FakeHapStatusError extends Error {
+  readonly hapStatus: number;
+}
+
+class StandInHapStatusError extends Error implements FakeHapStatusError {
+  readonly hapStatus: number;
+
+  constructor(hapStatus: number) {
+    super(`status code: ${String(hapStatus)}`);
+    this.hapStatus = normalizeHapError(hapStatus);
+    this.name = 'HapStatusError';
+  }
+}
+
+const UUID: FakeUuid = {
+  // Deterministic (same input -> same output, different input -> different output), never HAP's
+  // real v5 derivation: the harness needs a stable, injectable stand-in, not the production
+  // algorithm.
+  generate(data: string): string {
+    return createHash('sha1').update(data).digest('hex');
+  },
+};
+
+/** The characteristic properties this stand-in carries, named as the real `CharacteristicProps` names them. */
+export interface FakeCharacteristicProps {
+  format: string;
+  perms: readonly string[];
+  unit?: string;
+  minValue?: number;
+  maxValue?: number;
+  minStep?: number;
+  maxLen?: number;
+  validValues?: readonly number[];
+}
+
+const BOUNDED_STRING: FakeCharacteristicProps = { format: FORMATS.STRING, perms: [PERMS.PAIRED_READ], maxLen: 64 };
+const PLAIN_STRING: FakeCharacteristicProps = { format: FORMATS.STRING, perms: [PERMS.PAIRED_READ] };
+// ConfiguredName accepts a name written by a controller. The real HAP has no named default for
+// this identifier, so it starts empty. The seeding rule uses that value to distinguish an unnamed
+// service from a renamed one. Another fake default would invalidate the no-clobber check.
+const WRITABLE_STRING: FakeCharacteristicProps = { format: FORMATS.STRING, perms: [PERMS.NOTIFY, PERMS.PAIRED_READ, PERMS.PAIRED_WRITE] };
+const WRITE_ONLY_BOOL: FakeCharacteristicProps = { format: FORMATS.BOOL, perms: [PERMS.PAIRED_WRITE] };
+// On is the writable boolean a controller reads back after a press. It is the route a HomeKit
+// press takes to reach the vendor.
+const WRITABLE_BOOL: FakeCharacteristicProps = { format: FORMATS.BOOL, perms: [PERMS.NOTIFY, PERMS.PAIRED_READ, PERMS.PAIRED_WRITE] };
+const READ_ONLY_BOOL: FakeCharacteristicProps = { format: FORMATS.BOOL, perms: [PERMS.NOTIFY, PERMS.PAIRED_READ] };
+const BINARY_STATE: FakeCharacteristicProps = {
+  format: FORMATS.UINT8,
+  perms: [PERMS.NOTIFY, PERMS.PAIRED_READ],
+  minValue: 0,
+  maxValue: 1,
+  minStep: 1,
+  validValues: [0, 1],
+};
+const TERNARY_STATE: FakeCharacteristicProps = { ...BINARY_STATE, maxValue: 2, validValues: [0, 1, 2] };
+const UINT8_PERCENTAGE: FakeCharacteristicProps = {
+  format: FORMATS.UINT8,
+  perms: [PERMS.NOTIFY, PERMS.PAIRED_READ],
+  unit: UNITS.PERCENTAGE,
+  minValue: 0,
+  maxValue: 100,
+  minStep: 1,
+};
+const FLOAT_PERCENTAGE: FakeCharacteristicProps = { ...UINT8_PERCENTAGE, format: FORMATS.FLOAT };
+
+/** One characteristic on a stand-in service. */
+export interface FakeHapCharacteristic {
+  readonly displayName: string;
+  readonly UUID: string;
+  readonly props: FakeCharacteristicProps;
+  value: unknown;
+  /**
+   * Whether the plugin published an ordinary value through `updateCharacteristic`.
+   *
+   * The real HAP carries no such member, and no production code reads it. It exists because the
+   * construction default of both alarm characteristics is `0`, which is also the quiet state, so a
+   * scenario asserting a quiet sensor would otherwise be satisfied by a service the plugin created
+   * and never wrote to -- and would pass against an implementation that publishes nothing at all.
+   */
+  pushed: boolean;
+  /**
+   * The status the last write left on this characteristic, or `0` when there is none.
+   *
+   * The real HAP carries this member too, and it is the whole reason the write path is modelled
+   * here rather than assumed: a rejected write stores the thrown status and every later read
+   * answers it until an accepted write or valid ordinary push clears it, which is a service
+   * reading as unavailable long after the press that refused it. Real HAP validates an ordinary
+   * push first; failed validation preserves the prior status and value. A push of an error sets
+   * the status and stores nothing.
+   */
+  statusCode: number;
+  getDefaultValue(): unknown;
+  /** Registers the one write handler this characteristic answers through. */
+  onSet(handler: FakeSetHandler): FakeHapCharacteristic;
+  /**
+   * Answers a controller write, as the real HAP answers one.
+   *
+   * An accepted write clears the stored status and stores the value; a rejected one leaves the
+   * value exactly where it was and stores the status the handler named, then rejects with that
+   * status as a bare number.
+   */
+  handleSetRequest(value: unknown): Promise<void>;
+  /** Resolves a controller read with the stored value, or rejects with the stored status. */
+  handleGetRequest(): Promise<unknown>;
+}
+
+/** The one write handler a characteristic answers through. */
+export type FakeSetHandler = (value: unknown) => void | Promise<void>;
+
+/** A stand-in characteristic type: constructed with no arguments, and carrying the type's own identifier. */
+export interface FakeCharacteristicClass {
+  readonly UUID: string;
+  new (): FakeHapCharacteristic;
+}
+
+/** The leak states `LeakDetected` reports. */
+export interface FakeLeakDetectedValues {
+  readonly LEAK_NOT_DETECTED: number;
+  readonly LEAK_DETECTED: number;
+}
+
+/** The contact states `ContactSensorState` reports. */
+export interface FakeContactSensorStateValues {
+  readonly CONTACT_DETECTED: number;
+  readonly CONTACT_NOT_DETECTED: number;
+}
+
+/** The fault states `StatusFault` reports. */
+export interface FakeStatusFaultValues {
+  readonly NO_FAULT: number;
+  readonly GENERAL_FAULT: number;
+}
+
+/** The battery states `StatusLowBattery` reports. */
+export interface FakeStatusLowBatteryValues {
+  readonly BATTERY_LEVEL_NORMAL: number;
+  readonly BATTERY_LEVEL_LOW: number;
+}
+
+/** The charging states `ChargingState` reports. */
+export interface FakeChargingStateValues {
+  readonly NOT_CHARGING: number;
+  readonly CHARGING: number;
+  readonly NOT_CHARGEABLE: number;
+}
+
+/** The `Characteristic` member of the stand-in namespace: a constructible base carrying the standard definitions. */
+export interface FakeCharacteristicNamespace {
+  new (displayName: string, uuid: string, props: FakeCharacteristicProps): FakeHapCharacteristic;
+  readonly Manufacturer: FakeCharacteristicClass;
+  readonly Model: FakeCharacteristicClass;
+  readonly SerialNumber: FakeCharacteristicClass;
+  readonly FirmwareRevision: FakeCharacteristicClass;
+  readonly Name: FakeCharacteristicClass;
+  readonly ConfiguredName: FakeCharacteristicClass;
+  readonly Identify: FakeCharacteristicClass;
+  readonly LeakDetected: FakeCharacteristicClass & FakeLeakDetectedValues;
+  readonly ContactSensorState: FakeCharacteristicClass & FakeContactSensorStateValues;
+  readonly WaterLevel: FakeCharacteristicClass;
+  readonly StatusActive: FakeCharacteristicClass;
+  readonly StatusFault: FakeCharacteristicClass & FakeStatusFaultValues;
+  readonly StatusLowBattery: FakeCharacteristicClass & FakeStatusLowBatteryValues;
+  readonly BatteryLevel: FakeCharacteristicClass;
+  readonly ChargingState: FakeCharacteristicClass & FakeChargingStateValues;
+  readonly On: FakeCharacteristicClass;
+}
+
+// A handler may throw a status error, a bare status number, or anything else. Only the first two
+// name a status; everything else is a defect in the handler, which the real HAP reports as a
+// communication failure and warns about.
+function thrownStatusOf(error: unknown): number {
+  if (typeof error === 'number') {
+    return normalizeHapError(error);
+  }
+
+  return error instanceof StandInHapStatusError ? error.hapStatus : HAP_STATUS.SERVICE_COMMUNICATION_FAILURE;
+}
+
+function updatedErrorStatusOf(error: Error): number {
+  if (error instanceof StandInHapStatusError) {
+    return error.hapStatus;
+  }
+
+  return /^-?\d+$/.test(error.message) ? normalizeHapError(Number(error.message)) : HAP_STATUS.SERVICE_COMMUNICATION_FAILURE;
+}
+
+class StandInCharacteristic implements FakeHapCharacteristic {
+  readonly displayName: string;
+
+  readonly UUID: string;
+
+  readonly props: FakeCharacteristicProps;
+
+  value: unknown;
+
+  pushed = false;
+
+  statusCode = HAP_STATUS.SUCCESS;
+
+  private setHandler: FakeSetHandler | undefined = undefined;
+
+  constructor(displayName: string, uuid: string, props: FakeCharacteristicProps) {
+    this.displayName = displayName;
+    this.UUID = uuid;
+    this.props = { ...props, perms: [...props.perms], ...(props.validValues === undefined ? {} : { validValues: [...props.validValues] }) };
+    this.value = this.getDefaultValue();
+  }
+
+  onSet(handler: FakeSetHandler): FakeHapCharacteristic {
+    this.setHandler = handler;
+
+    return this;
+  }
+
+  // The real order matters: status clears as the write starts, before the handler settles. A
+  // successful handler stores the new value; a refusal leaves the published value untouched.
+  //
+  // `pushed` deliberately stays where it was. It marks a value the plugin published, and a
+  // controller write is not that; a scenario reading a control back is reading a characteristic the
+  // plugin already published to.
+  async handleSetRequest(value: unknown): Promise<void> {
+    this.statusCode = HAP_STATUS.SUCCESS;
+
+    if (this.setHandler === undefined) {
+      this.value = value;
+
+      return;
+    }
+
+    try {
+      await this.setHandler(value);
+    } catch (error: unknown) {
+      this.statusCode = thrownStatusOf(error);
+
+      // The real HAP rethrows the status as a bare number rather than the error it caught, so a
+      // caller reading `error.hapStatus` off it would be reading a member that is not there.
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- reproducing the real HAP write path, which rejects with a bare status number
+      throw this.statusCode;
+    }
+
+    this.statusCode = HAP_STATUS.SUCCESS;
+    this.value = value;
+  }
+
+  // A stored status rejects the read promise before the value is read, which makes a refused
+  // write outlive the press that caused it.
+  handleGetRequest(): Promise<unknown> {
+    if (this.statusCode !== HAP_STATUS.SUCCESS) {
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- real HAP rejects reads with the bare numeric status
+      return Promise.reject(this.statusCode);
+    }
+
+    return Promise.resolve(this.value);
+  }
+
+  // The real HAP answers `false` for a bool; for a string, one of four named defaults by identifier
+  // and the empty string otherwise; and for a numeric format the first declared valid value, then
+  // the declared minimum, then zero. Every numeric characteristic defined here has a finite
+  // minimum, and each first valid value equals that minimum. The real HAP also checks that a
+  // minimum is finite, which these definitions do not need to distinguish.
+  //
+  // Those defaults are this plugin's good-news values, so a service published before the first
+  // valid decode would read as a healthy sump pit. That is why the accessory adds no service until
+  // its row has a value to vouch for, and why the scenario "A field that never validates publishes
+  // no service at all" asserts an absent service rather than a quiet one (D-014).
+  getDefaultValue(): unknown {
+    if (this.props.format === FORMATS.BOOL) {
+      return false;
+    }
+
+    if (this.props.format === FORMATS.STRING) {
+      return NAMED_STRING_DEFAULTS.get(this.UUID) ?? '';
+    }
+
+    return this.props.validValues?.[0] ?? this.props.minValue ?? 0;
+  }
+}
+
+// One definition per standard characteristic avoids a separate class body for each type.
+function defineCharacteristic(displayName: string, uuid: string, props: FakeCharacteristicProps): FakeCharacteristicClass {
+  return class extends StandInCharacteristic {
+    static readonly UUID = uuid;
+
+    constructor() {
+      super(displayName, uuid, props);
+    }
+  };
+}
+
+const CHARACTERISTIC: FakeCharacteristicNamespace = Object.assign(StandInCharacteristic, {
+  Manufacturer: defineCharacteristic('Manufacturer', `00000020${APPLE_BASE_UUID}`, BOUNDED_STRING),
+  Model: defineCharacteristic('Model', `00000021${APPLE_BASE_UUID}`, BOUNDED_STRING),
+  SerialNumber: defineCharacteristic('Serial Number', `00000030${APPLE_BASE_UUID}`, BOUNDED_STRING),
+  FirmwareRevision: defineCharacteristic('Firmware Revision', `00000052${APPLE_BASE_UUID}`, PLAIN_STRING),
+  Name: defineCharacteristic('Name', `00000023${APPLE_BASE_UUID}`, BOUNDED_STRING),
+  ConfiguredName: defineCharacteristic('Configured Name', `000000E3${APPLE_BASE_UUID}`, WRITABLE_STRING),
+  Identify: defineCharacteristic('Identify', `00000014${APPLE_BASE_UUID}`, WRITE_ONLY_BOOL),
+  LeakDetected: Object.assign(defineCharacteristic('Leak Detected', `00000070${APPLE_BASE_UUID}`, BINARY_STATE), {
+    LEAK_NOT_DETECTED: 0,
+    LEAK_DETECTED: 1,
+  }),
+  ContactSensorState: Object.assign(defineCharacteristic('Contact Sensor State', `0000006A${APPLE_BASE_UUID}`, BINARY_STATE), {
+    CONTACT_DETECTED: 0,
+    CONTACT_NOT_DETECTED: 1,
+  }),
+  WaterLevel: defineCharacteristic('Water Level', `000000B5${APPLE_BASE_UUID}`, FLOAT_PERCENTAGE),
+  StatusActive: defineCharacteristic('Status Active', `00000075${APPLE_BASE_UUID}`, READ_ONLY_BOOL),
+  StatusFault: Object.assign(defineCharacteristic('Status Fault', `00000077${APPLE_BASE_UUID}`, BINARY_STATE), {
+    NO_FAULT: 0,
+    GENERAL_FAULT: 1,
+  }),
+  StatusLowBattery: Object.assign(defineCharacteristic('Status Low Battery', `00000079${APPLE_BASE_UUID}`, BINARY_STATE), {
+    BATTERY_LEVEL_NORMAL: 0,
+    BATTERY_LEVEL_LOW: 1,
+  }),
+  BatteryLevel: defineCharacteristic('Battery Level', `00000068${APPLE_BASE_UUID}`, UINT8_PERCENTAGE),
+  ChargingState: Object.assign(defineCharacteristic('Charging State', `0000008F${APPLE_BASE_UUID}`, TERNARY_STATE), {
+    NOT_CHARGING: 0,
+    CHARGING: 1,
+    NOT_CHARGEABLE: 2,
+  }),
+  On: defineCharacteristic('On', `00000025${APPLE_BASE_UUID}`, WRITABLE_BOOL),
+});
+
+/** One service on a stand-in accessory. */
+export interface FakeHapService {
+  readonly displayName: string;
+  readonly UUID: string;
+  readonly subtype: string | undefined;
+  readonly characteristics: readonly FakeHapCharacteristic[];
+  readonly optionalCharacteristics: readonly FakeHapCharacteristic[];
+  addCharacteristic(characteristicClass: FakeCharacteristicClass): FakeHapCharacteristic;
+  getCharacteristic(characteristicClass: FakeCharacteristicClass): FakeHapCharacteristic;
+  setCharacteristic(characteristicClass: FakeCharacteristicClass, value: unknown): FakeHapService;
+  updateCharacteristic(characteristicClass: FakeCharacteristicClass, value: unknown): FakeHapService;
+  testCharacteristic(characteristicClass: FakeCharacteristicClass): boolean;
+  addOptionalCharacteristic(characteristicClass: FakeCharacteristicClass): void;
+}
+
+/** A stand-in service type: constructed with a display name and a subtype, and carrying the type's own identifier. */
+export interface FakeServiceClass {
+  readonly UUID: string;
+  new (displayName?: string, subtype?: string): FakeHapService;
+}
+
+/** The `Service` member of the stand-in namespace: a constructible base carrying the standard definitions. */
+export interface FakeServiceNamespace {
+  new (displayName: string | undefined, uuid: string, subtype?: string): FakeHapService;
+  readonly AccessoryInformation: FakeServiceClass;
+  readonly LeakSensor: FakeServiceClass;
+  readonly ContactSensor: FakeServiceClass;
+  readonly Battery: FakeServiceClass;
+  readonly Switch: FakeServiceClass;
+}
+
+class StandInService implements FakeHapService {
+  readonly displayName: string;
+
+  readonly UUID: string;
+
+  readonly subtype: string | undefined;
+
+  readonly characteristics: FakeHapCharacteristic[] = [];
+
+  readonly optionalCharacteristics: FakeHapCharacteristic[] = [];
+
+  constructor(displayName: string | undefined, uuid: string, subtype?: string) {
+    this.displayName = displayName ?? '';
+    this.UUID = uuid;
+    this.subtype = subtype;
+
+    // The real `Service` constructor creates `Name` from the display name it was given, and only
+    // when it was given one, so a service added without a display name carries no `Name`.
+    if (this.displayName !== '') {
+      this.setCharacteristic(CHARACTERISTIC.Name, this.displayName);
+    }
+  }
+
+  addCharacteristic(characteristicClass: FakeCharacteristicClass): FakeHapCharacteristic {
+    const characteristic = new characteristicClass();
+    const existing = this.characteristics.find((candidate) => candidate.UUID === characteristic.UUID);
+
+    if (existing !== undefined) {
+      if (characteristic.UUID === CHARACTERISTIC.FirmwareRevision.UUID) {
+        return existing;
+      }
+
+      throw new Error(`Cannot add a Characteristic with the same UUID as another Characteristic in this Service: ${characteristic.UUID}`);
+    }
+
+    this.characteristics.push(characteristic);
+
+    return characteristic;
+  }
+
+  // The real lookup matches by `instanceof` or by the type's own identifier, and an accessory
+  // restored from the Homebridge cache carries plain `Characteristic` objects, so the identifier is
+  // the match that always holds.
+  getCharacteristic(characteristicClass: FakeCharacteristicClass): FakeHapCharacteristic {
+    return this.characteristics.find((characteristic) => characteristic.UUID === characteristicClass.UUID) ?? this.addCharacteristic(characteristicClass);
+  }
+
+  // A service set enters the write handler. HAP returns the service before an asynchronous handler
+  // settles and consumes a refused write when no callback was supplied.
+  setCharacteristic(characteristicClass: FakeCharacteristicClass, value: unknown): FakeHapService {
+    if (value instanceof Error) {
+      return this.updateCharacteristic(characteristicClass, value);
+    }
+
+    const characteristic = this.getCharacteristic(characteristicClass);
+    void characteristic.handleSetRequest(value).catch(() => undefined);
+
+    return this;
+  }
+
+  // The real `updateValue` takes two branches, and which one it takes decides whether the stored
+  // value survives.
+  //
+  // Handed an error it assigns the stored status and returns *before* it validates or stores
+  // anything, so the value and the published flag stay exactly where they were. That ordering is
+  // what makes an unreadable characteristic still carry the last reading the plugin vouched for,
+  // and it is the whole reason a persistent failure can be published without erasing anything
+  // (D-10, D-014).
+  //
+  // For a non-error input, real `updateValue` validates before clearing status or storing the
+  // value. Validation may coerce or clamp it, or fail and preserve the prior status. This stand-in
+  // models the accepted path for the valid values this plugin publishes: even a push of the value
+  // already held clears refusal and makes the characteristic readable again.
+  //
+  // Either way the effect is per characteristic: pushing `StatusActive` leaves a status stored on
+  // `On` exactly where it was.
+  updateCharacteristic(characteristicClass: FakeCharacteristicClass, value: unknown): FakeHapService {
+    const characteristic = this.getCharacteristic(characteristicClass);
+
+    // HAP parses a known numeric Error message on the update path. A write handler instead
+    // converts a plain thrown Error to a communication failure.
+    if (value instanceof Error) {
+      characteristic.statusCode = updatedErrorStatusOf(value);
+
+      return this;
+    }
+
+    characteristic.statusCode = HAP_STATUS.SUCCESS;
+    characteristic.value = value;
+    characteristic.pushed = true;
+
+    return this;
+  }
+
+  testCharacteristic(characteristicClass: FakeCharacteristicClass): boolean {
+    return this.characteristics.some((characteristic) => characteristic.UUID === characteristicClass.UUID);
+  }
+
+  // The real call is not idempotent: two calls append two entries. Production guards against the
+  // second call, so the stand-in has to be able to record one.
+  addOptionalCharacteristic(characteristicClass: FakeCharacteristicClass): void {
+    this.optionalCharacteristics.push(new characteristicClass());
+  }
+}
+
+/**
+ * One characteristic as the Homebridge accessory cache holds it.
+ *
+ * The members are the ones the real `Characteristic.serialize` persists, less the two this stand-in
+ * has no equivalent for, and plus `pushed`. `statusCode` is absent because the real serializer does
+ * not persist it either, so no stored status survives a restart in production.
+ *
+ * `pushed` is carried rather than forced true on every restore. It records that the plugin wrote
+ * the value, and what the cache holds is the value the plugin wrote, so the record is exactly as
+ * true after the restart as before it. Forcing it would make a characteristic HAP constructed and
+ * nothing ever wrote read as published, which is the one distinction the flag exists to draw.
+ */
+export interface SerializedCharacteristic {
+  readonly displayName: string;
+  readonly UUID: string;
+  readonly props: FakeCharacteristicProps;
+  readonly value: unknown;
+  readonly pushed: boolean;
+}
+
+/** One service as the Homebridge accessory cache holds it. */
+export interface SerializedService {
+  readonly displayName: string;
+  readonly UUID: string;
+  readonly subtype: string | undefined;
+  readonly characteristics: readonly SerializedCharacteristic[];
+  readonly optionalCharacteristics: readonly SerializedCharacteristic[];
+}
+
+function serializeCharacteristic(characteristic: FakeHapCharacteristic): SerializedCharacteristic {
+  return {
+    displayName: characteristic.displayName,
+    UUID: characteristic.UUID,
+    props: characteristic.props,
+    value: characteristic.value,
+    pushed: characteristic.pushed,
+  };
+}
+
+// The real `Characteristic.deserialize` assigns the stored value straight onto a freshly
+// constructed characteristic and stores no status, so a restored characteristic answers its last
+// value and reads as available.
+function deserializeCharacteristic(serialized: SerializedCharacteristic): FakeHapCharacteristic {
+  const characteristic = new StandInCharacteristic(serialized.displayName, serialized.UUID, serialized.props);
+
+  characteristic.value = serialized.value;
+  characteristic.pushed = serialized.pushed;
+
+  return characteristic;
+}
+
+/** Answers one service as the accessory cache holds it, as the real `Service.serialize` does. */
+export function serializeService(service: FakeHapService): SerializedService {
+  return {
+    displayName: service.displayName,
+    UUID: service.UUID,
+    subtype: service.subtype,
+    characteristics: service.characteristics.map(serializeCharacteristic),
+    optionalCharacteristics: service.optionalCharacteristics.map(serializeCharacteristic),
+  };
+}
+
+/**
+ * Rebuilds one service from the accessory cache, as the real `Service.deserialize` does.
+ *
+ * Both lists are replaced rather than added to, exactly as the real deserializer replaces them, so
+ * the `Name` the constructor derives from the display name does not survive beside the one the
+ * cache holds. The real one rebuilds the declared service type when the cache names one and falls
+ * back to a plain `Service` otherwise; this always takes the fallback, which is the shape
+ * `getCharacteristic` already matches by identifier rather than by class.
+ */
+export function deserializeService(serialized: SerializedService): FakeHapService {
+  const service = new StandInService(serialized.displayName, serialized.UUID, serialized.subtype);
+
+  service.characteristics.length = 0;
+  service.characteristics.push(...serialized.characteristics.map(deserializeCharacteristic));
+  service.optionalCharacteristics.length = 0;
+  service.optionalCharacteristics.push(...serialized.optionalCharacteristics.map(deserializeCharacteristic));
+
+  return service;
+}
+
+// The sensor and switch definitions add the characteristics this plugin reads and declare their
+// relevant optional characteristics.
+//
+// The optional list is not decoration. `publishValue` declares a characteristic before pushing it
+// only when the service neither carries nor declares it, and a stand-in that declared none would
+// send every push through the declaring branch while production took the other one -- so the guard
+// would be exercised on a path it never runs on. `Battery` genuinely declares neither status
+// characteristic, which is what keeps the declaring branch reachable here as it is in production.
+interface ServiceDefinition {
+  uuid: string;
+  required: readonly FakeCharacteristicClass[];
+  optional?: readonly FakeCharacteristicClass[];
+}
+
+function defineService({ uuid, required, optional = [] }: ServiceDefinition): FakeServiceClass {
+  return class extends StandInService {
+    static readonly UUID = uuid;
+
+    constructor(displayName?: string, subtype?: string) {
+      super(displayName, uuid, subtype);
+
+      for (const characteristicClass of required) {
+        this.addCharacteristic(characteristicClass);
+      }
+
+      for (const characteristicClass of optional) {
+        this.addOptionalCharacteristic(characteristicClass);
+      }
+    }
+  };
+}
+
+// These sensor lists omit `StatusTampered`, which this plugin never publishes.
+const SENSOR_OPTIONAL: readonly FakeCharacteristicClass[] = [CHARACTERISTIC.Name, CHARACTERISTIC.StatusActive, CHARACTERISTIC.StatusFault];
+
+class StandInAccessoryInformation extends StandInService {
+  static readonly UUID = `0000003E${APPLE_BASE_UUID}`;
+
+  constructor(displayName?: string, subtype?: string) {
+    super(displayName, StandInAccessoryInformation.UUID, subtype);
+
+    this.addCharacteristic(CHARACTERISTIC.Identify);
+    this.addCharacteristic(CHARACTERISTIC.Manufacturer);
+    this.addCharacteristic(CHARACTERISTIC.Model);
+    if (!this.testCharacteristic(CHARACTERISTIC.Name)) {
+      this.addCharacteristic(CHARACTERISTIC.Name).value = 'Unnamed Service';
+    }
+
+    this.addCharacteristic(CHARACTERISTIC.SerialNumber);
+    this.addCharacteristic(CHARACTERISTIC.FirmwareRevision);
+    this.addOptionalCharacteristic(CHARACTERISTIC.ConfiguredName);
+  }
+}
+
+const SERVICE: FakeServiceNamespace = Object.assign(StandInService, {
+  AccessoryInformation: StandInAccessoryInformation,
+  LeakSensor: defineService({
+    uuid: `00000083${APPLE_BASE_UUID}`,
+    required: [CHARACTERISTIC.LeakDetected],
+    optional: [...SENSOR_OPTIONAL, CHARACTERISTIC.StatusLowBattery],
+  }),
+  ContactSensor: defineService({
+    uuid: `00000080${APPLE_BASE_UUID}`,
+    required: [CHARACTERISTIC.ContactSensorState],
+    optional: [...SENSOR_OPTIONAL, CHARACTERISTIC.StatusLowBattery],
+  }),
+  // The real `Battery` declares neither `StatusActive` nor `StatusFault`, so the accessory's push
+  // of `StatusActive` onto it declares the characteristic first, in production as here.
+  Battery: defineService({
+    uuid: `00000096${APPLE_BASE_UUID}`,
+    required: [CHARACTERISTIC.StatusLowBattery],
+    optional: [CHARACTERISTIC.BatteryLevel, CHARACTERISTIC.ChargingState, CHARACTERISTIC.Name],
+  }),
+  // The real `Switch` requires `On` and declares `Name` optional, and nothing else. `StatusActive`
+  // is in neither list, so the plugin's push of it goes through the declaring branch here as it
+  // does in production.
+  Switch: defineService({
+    uuid: `00000049${APPLE_BASE_UUID}`,
+    required: [CHARACTERISTIC.On],
+    optional: [CHARACTERISTIC.Name],
+  }),
+});
+
+/** The hand-built HAP namespace, in the shape a plugin consumes `api.hap` in. */
+export interface FakeHap {
+  readonly Service: FakeServiceNamespace;
+  readonly Characteristic: FakeCharacteristicNamespace;
+  readonly Formats: FakeFormats;
+  readonly Perms: FakePerms;
+  readonly Units: FakeUnits;
+  readonly uuid: FakeUuid;
+  readonly HAPStatus: FakeHapStatus;
+  readonly HapStatusError: new (hapStatus: number) => FakeHapStatusError;
+}
+
+const HAP: FakeHap = {
+  Service: SERVICE,
+  Characteristic: CHARACTERISTIC,
+  Formats: FORMATS,
+  Perms: PERMS,
+  Units: UNITS,
+  uuid: UUID,
+  HAPStatus: HAP_STATUS,
+  HapStatusError: StandInHapStatusError,
+};
+
+/**
+ * Answers the HAP namespace stand-in.
+ *
+ * Every caller gets the same namespace, so a type declared against one caller's `Service` is the
+ * same type another caller looks a service up by. The namespace holds no per-scenario state: a
+ * service and its characteristics live on the accessory that added them.
+ */
+export function createFakeHap(): FakeHap {
+  return HAP;
+}

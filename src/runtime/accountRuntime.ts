@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Coordinates account monitoring, credential rotation and commands.
+ */
+
 import timers from 'node:timers/promises';
 
 import { createReconciliation } from '../accessories/reconciliation.js';
@@ -40,6 +49,7 @@ import type { Logging } from 'homebridge';
 const REQUEST_TIMEOUT_MS = 10_000;
 
 const MILLISECONDS_PER_SECOND = 1_000;
+const MAX_TIMEOUT_DELAY_MS = 2_147_483_647;
 
 /** How long before a credential expiry a bundled runtime refreshes the cache. */
 export const ROTATION_LEAD_MS = 600_000;
@@ -69,11 +79,10 @@ const AUTHENTICATION_STOPPED =
 // cadence with no change to the limiter, and a pump that has been quiet all
 // afternoon can no longer hold back the first warning about the pump beside it.
 // The vendor `deviceId` carries the account identifier: it reads
-// `<account-id>_<serial-number>`, and the first segment is an opaque
-// 24-character lowercase hexadecimal key. That key names no person, and it
-// unlocks no route, no header and no credential, so the value is permitted in
-// runtime logs and in accessory context. A public artifact still replaces it
-// with a placeholder (D-14, D-027, AUTH-02).
+// `<account-id>_<serial-number>`. The scoped permission allows it in local
+// runtime logs, accessory context and persisted arrival anchors. That permission
+// rests on the unconfirmed assumption that `<account-id>` is an opaque key.
+// Public and planning artifacts use placeholders (D-14, D-027, AUTH-02).
 function liveReportingKind(deviceId: string): string {
   return `Live device reporting for ${deviceId}`;
 }
@@ -231,7 +240,8 @@ export interface AccountRuntime {
    * mechanism every other wait and request already ends on (CTRL-05, SYNC-05).
    */
   readonly commands: CommandPort;
-  start(): Promise<void>;
+  /** Starts monitoring with known physical IDs eligible for absence confirmation, without supplying telemetry. */
+  start(knownDeviceIds?: readonly string[]): Promise<void>;
   stop(): Promise<void>;
 }
 
@@ -316,10 +326,12 @@ function rotationDelayMs(expiration: string, now: number, options: AccountRuntim
 /**
  * Creates the account runtime.
  *
- * One root `AbortController` owns every wait, request, and connection, so a
- * shutdown cancels them all through one mechanism and leaves no timer holding
- * the process open (SYNC-05). Creating the runtime opens no connection, reads
- * no file, and starts no timer; only `start` does any work.
+ * One root `AbortController` signals shutdown cancellation to runtime waits
+ * and requests (SYNC-05). Shutdown also explicitly closes the recorded shadow
+ * client. If a client's start resolves after shutdown or a terminal
+ * authentication halt, the post-start ownership check closes it before
+ * recording it. Creating the runtime opens no connection, reads no file, and
+ * starts no timer; only `start` does any work.
  *
  * Both long-running activities are loops rather than self-rearming callbacks.
  * A loop keeps the next attempt scheduled no matter how the last one ended,
@@ -331,10 +343,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   const root = new AbortController();
   const connectRetry = options.createRetry(root.signal);
   const shadowRetry = options.createRetry(root.signal);
-  const reconciliation = createReconciliation({ clock: options.clock, log: options.log });
+  const reconciliation = createReconciliation({ log: options.log });
   const health = createMonitoringHealth({ clock: options.clock, monotonic: options.monotonic, anchors: options.anchors });
   let credentials: MutableCredentialCache | undefined;
   let shadow: ShadowClient | undefined;
+  let shadowDeviceIds: ReadonlySet<string> = new Set<string>();
   // The three facts the monitoring path is derived from. Holding them, rather
   // than the answer, is what keeps the derivation from depending on which
   // assignment ran last.
@@ -363,6 +376,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // Homebridge process (D-20).
   async function waitFor(delayMs: number): Promise<boolean> {
     try {
+      while (delayMs > MAX_TIMEOUT_DELAY_MS) {
+        await timers.setTimeout(MAX_TIMEOUT_DELAY_MS, undefined, { signal: root.signal });
+        delayMs -= MAX_TIMEOUT_DELAY_MS;
+      }
+
       await timers.setTimeout(delayMs, undefined, { signal: root.signal });
 
       return true;
@@ -382,6 +400,19 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // (D-13, D-10).
   async function waitWhileRunning(delayMs: number): Promise<boolean> {
     return !halted && (await waitFor(delayMs)) && !halted;
+  }
+
+  // Whether the runtime will ever open a connection again. A shutdown has
+  // begun, or a refused credential has halted it for good. Neither ends, so a
+  // connection opened after either is one nothing will use and nothing will
+  // close, and one answer covers both because the question the connect path
+  // asks is the same either way.
+  //
+  // It is asked through a function so that a check after an await asks again
+  // rather than reusing the answer from before it, which is the whole point of
+  // checking twice (SYNC-05, D-13).
+  function hasFinished(): boolean {
+    return stopped || halted;
   }
 
   // The final check re-fetches the inventory once more, immediately before a
@@ -413,7 +444,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     // by the loop below is therefore never released on the same poll, because
     // the loop runs after this one and the device holds no watermark yet.
     for (const deviceId of health.silentDevices()) {
-      options.store.releaseShadowSource(deviceId);
+      options.store.releaseShadowSource(deviceId, 'silence');
     }
 
     for (const device of devices) {
@@ -437,7 +468,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 
     try {
       freshDevices = await options.api.devices(root.signal);
-    } catch {
+    } catch (error: unknown) {
+      if (error instanceof AuthRejectedError || error instanceof AuthHaltedError) {
+        throw error;
+      }
+
       // Deliberately silent, for the reason above. The `try` holds the fetch
       // and nothing else: every statement below it changes state, and a
       // failure there is a different fact that has to be reported rather than
@@ -445,17 +480,20 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       return;
     }
 
+    if (hasFinished()) {
+      return;
+    }
+
     const stillPresent = new Set(freshDevices.map((device) => device.deviceId));
 
-    // Only the deviceIds actually under confirmation are re-observed here
-    // (CR-01): replaying the whole fleet through `reconciliation.observe()`
-    // let a transient omission on this extra request advance an unrelated,
+    // Only the deviceIds under confirmation are re-observed here (CR-01).
+    // A transient omission on this extra request must not advance an unrelated,
     // otherwise-healthy deviceId's absence count.
     for (const deviceId of confirmedAbsent) {
       if (stillPresent.has(deviceId)) {
-        // Reappeared since the confirming poll: forget it so a future absence
-        // starts a fresh epoch.
-        reconciliation.forget(deviceId);
+        // Reappearance resets this device's absence count while keeping it
+        // eligible for confirmation by later regular inventories.
+        reconciliation.present(deviceId);
 
         continue;
       }
@@ -601,11 +639,9 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // One trust struct per system the account currently holds, built from the
   // account-wide facts plus this device's own silence.
   //
-  // Neither input is new. `store.deviceIds()` is the inventory the runtime
-  // already keeps, and `health.silentDevices()` has answered per device since
-  // it began stamping arrivals per device, so nothing here tracks anything the
-  // runtime was not already tracking -- the flatten that collapsed the second
-  // list into one boolean is simply gone (D-01, D-03).
+  // `store.deviceIds()` supplies the inventory and `health.silentDevices()`
+  // supplies the silent controllers. Each system keeps its own silence answer
+  // alongside the shared account facts (D-01, D-03).
   function monitoringTrustByDevice(account: MonitoringTrust): ReadonlyMap<string, MonitoringTrust> {
     const silent = new Set(health.silentDevices());
 
@@ -781,12 +817,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     // `applyDevices` owns it, because a socket that is still open says nothing
     // about a device that has stopped speaking (D-15, D-13, SYNC-03).
     //
-    // The two now differ in signature as well as in cause, and this one is
-    // fleet-wide on purpose: the connection that ended carried every device, so
-    // no device still has a live path. The silence one names its device,
-    // because silence is a fact about one controller.
+    // A disconnect releases the whole fleet: the connection carries every
+    // device, so none keeps a live path when it ends. A silence release names
+    // its device because silence is a fact about one controller.
     for (const deviceId of options.store.deviceIds()) {
-      options.store.releaseShadowSource(deviceId);
+      options.store.releaseShadowSource(deviceId, 'disconnect');
     }
 
     if (reason !== 'transport-closed') {
@@ -794,84 +829,80 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     }
   }
 
-  // Whether the runtime will ever open a connection again. A shutdown has
-  // begun, or a refused credential has halted it for good. Neither ends, so a
-  // connection opened after either is one nothing will use and nothing will
-  // close, and one answer covers both because the question the connect path
-  // asks is the same either way.
-  //
-  // It is asked through a function so that a check after an await asks again
-  // rather than reusing the answer from before it, which is the whole point of
-  // checking twice (SYNC-05, D-13).
-  function hasFinished(): boolean {
-    return stopped || halted;
-  }
-
-  // Opens the connection once there is both a credential cache to sign from and
-  // a device to subscribe for, and reports whether it was refused so the caller
-  // can decide whether a retry chain needs starting.
+  // Starts the shadow for the current physical membership when it changes,
+  // once credentials and devices exist. Reports whether the attempt was refused
+  // so the caller can decide whether a retry chain needs starting.
   async function attemptShadow(): Promise<boolean> {
     const cache = credentials;
     const deviceIds = options.store.deviceIds();
 
-    if (hasFinished() || shadow !== undefined || cache === undefined || deviceIds.length === 0) {
+    if (hasFinished() || cache === undefined || deviceIds.length === 0) {
       return false;
     }
 
+    if (shadow !== undefined && shadowDeviceIds.size === deviceIds.length && deviceIds.every((deviceId) => shadowDeviceIds.has(deviceId))) {
+      return false;
+    }
+
+    if (shadow !== undefined) {
+      // Membership replacement ends the old transport without a disconnect callback.
+      handleShadowDisconnected('transport-closed');
+    }
+
     try {
-      const client = options.createShadow({
-        credentials: cache,
-        retry: shadowRetry,
-        onReportedPatch: (deviceId: string, patch: ReportedPatch) => {
-          // This callback fires for every routed message, upstream of the
-          // store's change filter, which is why it and not a snapshot listener
-          // is the arrival signal: a heartbeat carrying values identical to the
-          // last one notifies no subscriber and still proves the live path is
-          // carrying messages (D-05, D-11).
-          //
-          // The three steps are in this order deliberately. Stamping first is
-          // what makes the recomputed trust see this arrival. Applying the patch
-          // before the report is what puts the new value on the tile before the
-          // marker says the plugin vouches for it again, so there is no instant
-          // in which the accessory claims to vouch for a value it has not yet
-          // published.
-          //
-          // Reporting here is what makes the recovery arrive with the evidence
-          // rather than at the next poll tick, which the configuration lets run
-          // an hour long. The latch is what keeps it to one report per recovery:
-          // a working live path delivers a heartbeat every fifteen minutes, and
-          // a report on each one would push a trust fan-out across every
-          // accessory for no new information.
-          //
-          // No timer and no loop is introduced. The arrival is an event the
-          // shadow client already delivers, so detection stays as lazy as it was
-          // and the whole projection stays drivable from the injected clock and
-          // the injected timers -- which is the constraint the lazy evaluation
-          // was chosen for (D-05, D-11).
-          // The stamp belongs to the device the message came from. An account
-          // stamp is re-armed by whichever pump spoke last, so on a multi-pump
-          // account one heartbeat vouches for a neighbour that has stopped
-          // speaking, and that controller's silence is never noticed at all.
-          //
-          // Guarded on store membership because the shadow client stays
-          // subscribed to a removed device's topics until the connection is
-          // rebuilt, so a stray message can still arrive after removal. Left
-          // unguarded, it would resurrect the in-memory arrival stamp and the
-          // persisted anchor the removal branch already dropped for a system
-          // that has left the account (D-14).
-          if (options.store.deviceIds().includes(deviceId)) {
-            health.recordShadowMessage(deviceId);
-          }
+      const client =
+        shadow ??
+        options.createShadow({
+          credentials: cache,
+          retry: shadowRetry,
+          onReportedPatch: (deviceId: string, patch: ReportedPatch) => {
+            // The store decides version ordering. It returns the previous
+            // snapshot for a rejected patch and a new one for an accepted patch,
+            // even when the values match and no subscriber is notified. Only an
+            // accepted, nonempty telemetry section renews liveness. Empty and
+            // metadata-only messages do not (D-05, D-11).
+            //
+            // Apply before stamping so a rejected version cannot refresh the
+            // silence clock or durable anchor. Report after both, so recovery
+            // never vouches for a reading before the store has published it.
+            //
+            // Reporting here is what makes the recovery arrive with the evidence
+            // rather than at the next poll tick, which the configuration lets run
+            // an hour long. The latch is what keeps it to one report per recovery:
+            // a working live path delivers a heartbeat every fifteen minutes, and
+            // a report on each one would push a trust fan-out across every
+            // accessory for no new information.
+            //
+            // No timer and no loop is introduced. The arrival is an event the
+            // shadow client already delivers, so detection stays as lazy as it was
+            // and the whole projection stays drivable from the injected clock and
+            // the injected timers -- which is the constraint the lazy evaluation
+            // was chosen for (D-05, D-11).
+            // The stamp belongs to the device the message came from. An account
+            // stamp is re-armed by whichever pump spoke last, so on a multi-pump
+            // account one heartbeat vouches for a neighbour that has stopped
+            // speaking, and that controller's silence is never noticed at all.
+            //
+            // Guarded on a prior store snapshot because the shadow client stays
+            // subscribed to a removed device's topics until the connection is
+            // rebuilt, so a stray message can still arrive after removal. Left
+            // unguarded, it would resurrect the in-memory arrival stamp and the
+            // persisted anchor the removal branch already dropped for a system
+            // that has left the account (D-14).
+            const previous = options.store.snapshot(deviceId);
+            const applied = options.store.applyReportedPatch(deviceId, patch);
 
-          options.store.applyReportedPatch(deviceId, patch);
+            if (previous !== undefined && applied !== previous && patch.data !== undefined && Object.keys(patch.data).length > 0) {
+              health.recordShadowMessage(deviceId);
+            }
 
-          if (reportedSilentDevices.has(deviceId)) {
-            reportMonitoringHealth();
-          }
-        },
-        onConnected: handleShadowConnected,
-        onDisconnected: handleShadowDisconnected,
-      });
+            if (reportedSilentDevices.has(deviceId)) {
+              reportMonitoringHealth();
+            }
+          },
+          onConnected: handleShadowConnected,
+          onDisconnected: handleShadowDisconnected,
+        });
       await client.start(deviceIds);
 
       // The start has already opened the socket, so a shutdown or a refusal
@@ -890,6 +921,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       }
 
       shadow = client;
+      shadowDeviceIds = new Set(deviceIds);
 
       return false;
     } catch {
@@ -949,7 +981,9 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         cache.replace(toShadowCredentials(response));
       }
 
-      options.failures.recordSuccess(ROTATION);
+      if (!hasFinished()) {
+        options.failures.recordSuccess(ROTATION);
+      }
 
       return rotationDelayMs(response.credentials.Expiration, options.clock.now(), options);
     } catch (error: unknown) {
@@ -979,7 +1013,18 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // (SYNC-03).
   async function runPoll(): Promise<void> {
     try {
-      await applyDevices(await options.api.devices(root.signal));
+      const devices = await options.api.devices(root.signal);
+
+      if (hasFinished()) {
+        return;
+      }
+
+      await applyDevices(devices);
+
+      if (hasFinished()) {
+        return;
+      }
+
       recordPollSuccess();
       await openShadow();
     } catch (error: unknown) {
@@ -993,7 +1038,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       // A terminal authentication answer is not a poll failure. Reaching the
       // generic device-discovery line below would name a cause that did not
       // happen, and an owner acts on a diagnostic (D-13, D-03).
-      if (haltOnTerminalAuthFailure(error)) {
+      if (haltOnTerminalAuthFailure(error) || hasFinished()) {
         return;
       }
 
@@ -1025,7 +1070,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // retried on the long interval the error carries rather than on the capped
   // backoff (D-22).
   function launchFailure(error: unknown): number | undefined {
-    if (root.signal.aborted) {
+    if (hasFinished()) {
       return undefined;
     }
 
@@ -1053,7 +1098,17 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   async function launch(): Promise<number | undefined> {
     try {
       const devices = await options.api.devices(root.signal);
+
+      if (hasFinished()) {
+        return undefined;
+      }
+
       await applyDevices(devices);
+
+      if (hasFinished()) {
+        return undefined;
+      }
+
       recordPollSuccess();
       options.log.info(`Discovered ${String(devices.length)} device(s).`);
     } catch (error: unknown) {
@@ -1115,7 +1170,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     // Resolves once the first attempt has been made. A launch that must be
     // tried again waits in the background, so the Homebridge launch event is
     // never held open by a vendor that is not answering.
-    async start(): Promise<void> {
+    async start(knownDeviceIds: readonly string[] = []): Promise<void> {
       if (started || stopped) {
         return;
       }
@@ -1128,6 +1183,14 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       // anchored at this instant -- and a bridge restarted after a pump had been
       // quiet for hours would vouch for it (D-07).
       await options.anchors.restore();
+
+      if (hasFinished()) {
+        return;
+      }
+
+      for (const deviceId of knownDeviceIds) {
+        reconciliation.present(deviceId);
+      }
 
       const retryInMs = await launch();
 
@@ -1233,7 +1296,7 @@ export function createAccountRuntimeFromConfig(deps: AccountRuntimeDeps): Accoun
   // The auth client registers one value that must be kept for the life of the
   // process, so it calls this with no role and keeps its own single-argument
   // signature.
-  const registerSecret = (secret: string, role?: SecretRole): void => {
+  const registerSecret: (secret: string, role?: SecretRole) => void = (secret, role) => {
     deps.log.registerSecret(secret, role);
   };
 
@@ -1270,7 +1333,7 @@ export function createAccountRuntimeFromConfig(deps: AccountRuntimeDeps): Accoun
     pollIntervalMs: deps.config.pollIntervalSeconds * MILLISECONDS_PER_SECOND,
     rotationLeadMs: deps.rotationLeadMs ?? ROTATION_LEAD_MS,
     minRotationDelayMs: deps.minRotationDelayMs ?? MIN_ROTATION_DELAY_MS,
-    failures: createFailureLog({ clock: deps.clock, log: deps.log, reminderIntervalMs: FAILURE_REMINDER_MS }),
+    failures: createFailureLog({ monotonic: deps.monotonic, log: deps.log, reminderIntervalMs: FAILURE_REMINDER_MS }),
     registerSecret,
     onTrustworthyInventory: deps.onTrustworthyInventory ?? (() => undefined),
     onDeviceRemoved: deps.onDeviceRemoved ?? (() => undefined),
