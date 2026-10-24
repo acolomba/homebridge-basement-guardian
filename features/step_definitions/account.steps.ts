@@ -58,6 +58,17 @@ const REJECTION_ERROR =
   'Correct the account email and password in the Homebridge UI (Plugins -> Basement Guardian -> Settings); saving there restarts the plugin. ' +
   'No further attempt will be made, because each one extends the vendor block on the account.';
 
+const MONITORING_STOPPED_WARNING =
+  'warn Monitoring has stopped because the vendor refused the account credentials. Correct the account in Homebridge to start the plugin again.';
+
+const THROTTLE_RETRY_WARNING = 'warn Authentication is being throttled, so the plugin is waiting before it tries again.';
+
+// The lines an operator acts on. Debug and info lines vary with what each scenario ran before the
+// failure, while the warnings and errors are the whole account of what went wrong and what to do.
+function operatorLines(logged: readonly string[]): readonly string[] {
+  return logged.filter((line) => line.startsWith('warn ') || line.startsWith('error '));
+}
+
 // A cache naming a different account: the fingerprint cannot match the one the plugin computes for
 // the configured account, so the plugin has to authenticate again and then act on the answer.
 const FOREIGN_CACHE = {
@@ -191,11 +202,11 @@ Then('the token cache is absent', async function (this: BasementGuardianWorld): 
 });
 
 Then('the log names how to correct the account', function (this: BasementGuardianWorld): void {
-  assert.equal(this.logged.includes(REJECTION_ERROR), true);
+  assert.deepEqual(operatorLines(this.logged), [REJECTION_ERROR, MONITORING_STOPPED_WARNING]);
 });
 
 Then('the log names the throttling and how to stop the plugin', function (this: BasementGuardianWorld): void {
-  assert.equal(this.logged.includes(THROTTLE_WARNING), true);
+  assert.deepEqual(operatorLines(this.logged), [THROTTLE_WARNING, THROTTLE_RETRY_WARNING]);
 });
 
 Then('the log carries no credential', function (this: BasementGuardianWorld): void {
