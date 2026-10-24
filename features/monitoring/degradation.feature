@@ -333,7 +333,7 @@ Feature: Monitoring degradation
       | water_level | 3 |
     Then the canonical snapshot carries these fields:
       | water_level | 3 |
-    Given the service fails every request with status 503
+    When the vendor service starts failing every request with status 503
     Then the "Basement Guardian Offline" service reports "Status Active" as "false"
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
     Then the "Basement Guardian Offline" sensor is not activated
@@ -348,7 +348,7 @@ Feature: Monitoring degradation
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
-    Given the service fails every request with status 503
+    When the vendor service starts failing every request with status 503
     When the scenario clock moves forward by 1796 seconds
     Then the "Sump Pit Flood" service reports "Status Active" as "false"
     Then the "Basement Guardian Offline" service reports "Status Active" as "false"
@@ -372,7 +372,7 @@ Feature: Monitoring degradation
       | serial_communications | false |
     Then the "Pump Controller Link Lost" sensor is activated
     Then the "Pump Controller Link Lost" service reports "Status Active" as "true"
-    Given the service fails every request with status 503
+    When the vendor service starts failing every request with status 503
     When the scenario clock moves forward by 1796 seconds
     Then the "Pump Controller Link Lost" service reports "Status Active" as "false"
     Then the "Pump Controller Link Lost" sensor is activated
@@ -463,7 +463,7 @@ Feature: Monitoring degradation
     Then the "Sump Pit Flood" service reports "Status Active" as "false"
     Then the canonical snapshot carries these fields:
       | water_level | 1 |
-    Given the vendor never answers the device list
+    When the vendor stops answering the device list
     Then the plugin stops asking for the device list
     When the device publishes these heartbeat fields:
       | water_level | 1 |
@@ -482,7 +482,7 @@ Feature: Monitoring degradation
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
-    Given the service fails every request with status 503
+    When the vendor service starts failing every request with status 503
     When the plugin restarts
     Then the "Sump Pit Flood" service reports "Status Active" as "false"
     Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
@@ -497,7 +497,7 @@ Feature: Monitoring degradation
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the "Sump Pit Level" service reports "Water Level" as "20"
-    Given the service fails every request with status 503
+    When the vendor service starts failing every request with status 503
     When the plugin restarts
     Then the "Sump Pit Level" service reports "Status Active" as "false"
     Then the "Sump Pit Level" service reports "Water Level" as "20"
@@ -515,7 +515,7 @@ Feature: Monitoring degradation
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the plugin publishes the "System Self-Test" service
-    Given the service fails every request with status 503
+    When the vendor service starts failing every request with status 503
     When the plugin restarts
     When a controller presses the "System Self-Test" switch
     Then the write reports that the control is not allowed now
@@ -541,8 +541,8 @@ Feature: Monitoring degradation
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
-    Given the tenant refuses the account credentials
-    Given the storage holds a token for another account
+    When the tenant starts refusing the account credentials
+    When the owner replaces the token cache with one for another account
     When the plugin restarts
     Then the log names how to correct the account
     Then the "Sump Pit Flood" service answers no read for "Status Active"
@@ -567,7 +567,7 @@ Feature: Monitoring degradation
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
-    Given the tenant refuses the account credentials
+    When the tenant starts refusing the account credentials
     When the scenario clock moves forward by 120 seconds
     Then the "Sump Pit Flood" service answers no read for "Status Active"
     Then every published service refuses its trust read
@@ -590,8 +590,7 @@ Feature: Monitoring degradation
     The heartbeat before the refusal proves the live path was carrying messages, which is what makes
     the silence after it belong to the plugin rather than to a broker that delivered nothing. The
     three services read here are a leak sensor, a contact sensor, and a switch, so "every service"
-    rests on more than one kind. 31 is the water level the Gemini family calls a flooding pit: a
-    stopped plugin reports no flood, and the refusal an owner must act on is the louder signal.
+    rests on more than one kind.
 
     Given a short poll interval
     Given the tenant issues tokens that expire in 3660 seconds
@@ -603,7 +602,7 @@ Feature: Monitoring degradation
       | water_level | 3 |
     Then the canonical snapshot carries these fields:
       | water_level | 3 |
-    Given the tenant refuses the account credentials
+    When the tenant starts refusing the account credentials
     When the scenario clock moves forward by 120 seconds
     Then the "Sump Pit Flood" service answers no read for "Status Active"
     Then the broker holds no live connection
@@ -614,6 +613,26 @@ Feature: Monitoring degradation
     Then the "System Self-Test" service still answers no read for "Status Active"
     Then every published service refuses its trust read
     Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
+
+  Scenario: A flooding heartbeat hours after a refused credential leaves every service refused
+    The scenario above publishes one message straight after the refusal. This one waits two hours,
+    long past every silence window, and then publishes the water level the Gemini family calls a
+    flooding pit. A stopped plugin reports no flood, and the refusal an owner must act on is the
+    louder signal, so every service still refuses its read and the flood sensor keeps its last value.
+
+    Given a short poll interval
+    Given the tenant issues tokens that expire in 3660 seconds
+    Given these devices:
+      | device id          | name          |
+      | placeholder-gemini | Sump Guardian |
+    When the plugin starts
+    When the device publishes these heartbeat fields:
+      | water_level | 3 |
+    Then the canonical snapshot carries these fields:
+      | water_level | 3 |
+    When the tenant starts refusing the account credentials
+    When the scenario clock moves forward by 120 seconds
+    Then the broker holds no live connection
     When the scenario clock moves forward by 7200 seconds
     When the broker publishes these heartbeat fields without a live subscriber:
       | water_level | 31 |
@@ -623,7 +642,7 @@ Feature: Monitoring degradation
     Then every published service refuses its trust read
     Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
 
-  Scenario: A press after a refused credential leaves both controls still refusing reads
+  Scenario: A press on the self-test switch after a refused credential leaves both controls refusing reads
     The scenario above watches messages arrive. This one watches the owner. A greyed-out tile is
     alarming, and the first thing anybody does with an alarming switch is press it. The plugin has
     stopped for good and only the owner can restart it, which is the whole reason this one failure
@@ -641,10 +660,10 @@ Feature: Monitoring degradation
     for the next macrotask, so a scenario that presses and reads without advancing reads the moment
     before the damage and passes against the defect.
 
-    Both switches are pressed, so the claim rests on the pair rather than on one of them, and the
-    flood sensor is read after each press to show that a press on a control does not reach past the
-    control either. The readings stay where they were: the refusal marks the accessory, it does not
-    empty it.
+    Each switch is pressed in a scenario of its own, and each reads both switches afterwards, so the
+    claim rests on the pair rather than on one of them. The flood sensor is read after the press to
+    show that a press on a control does not reach past the control either. The readings stay where
+    they were: the refusal marks the accessory, it does not empty it.
 
     Given a short poll interval
     Given the tenant issues tokens that expire in 3660 seconds
@@ -656,7 +675,7 @@ Feature: Monitoring degradation
       | water_level | 3 |
     Then the canonical snapshot carries these fields:
       | water_level | 3 |
-    Given the tenant refuses the account credentials
+    When the tenant starts refusing the account credentials
     When the scenario clock moves forward by 120 seconds
     Then the "System Self-Test" service answers no read for "Status Active"
     When a controller presses the "System Self-Test" switch
@@ -668,6 +687,24 @@ Feature: Monitoring degradation
     Then the "Sump Pit Flood" service still answers no read for "Status Active"
     Then every published service refuses its trust read
     Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
+
+  Scenario: A press on the alarm mute switch after a refused credential leaves both controls refusing reads
+    The scenario above presses the self-test switch. This one presses the other control, for the
+    same reason: a press arms a push that would return the control rows to a normal read.
+
+    Given a short poll interval
+    Given the tenant issues tokens that expire in 3660 seconds
+    Given these devices:
+      | device id          | name          |
+      | placeholder-gemini | Sump Guardian |
+    When the plugin starts
+    When the device publishes these heartbeat fields:
+      | water_level | 3 |
+    Then the canonical snapshot carries these fields:
+      | water_level | 3 |
+    When the tenant starts refusing the account credentials
+    When the scenario clock moves forward by 120 seconds
+    Then the "Alarm Mute" service answers no read for "Status Active"
     When a controller presses the "Alarm Mute" switch
     Then the write reports that the control is not allowed now
     Then the vendor receives no command

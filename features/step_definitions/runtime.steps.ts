@@ -90,25 +90,6 @@ Given('the service holds the next request', async function (this: BasementGuardi
   service.holdNextRequest();
 });
 
-Given('the vendor never answers the device list', { timeout: STEP_TIMEOUT_MS }, async function (this: BasementGuardianWorld): Promise<void> {
-  const service = await this.restApi();
-  const atArming = deviceRequestCount(service);
-
-  service.holdEveryDeviceRequest();
-  await this.untilTrue(
-    () => deviceRequestCount(service) > atArming,
-    DEADLINE_MS,
-    `the plugin asked for the device list no further time after the hold was armed; it had asked ${String(atArming)} times`,
-  );
-  this.remember(PARKED_DEVICE_REQUESTS, deviceRequestCount(service));
-});
-
-Given('the service fails every request with status {int}', async function (this: BasementGuardianWorld, status: number): Promise<void> {
-  const service = await this.restApi();
-
-  service.failEveryRequestWith(status);
-});
-
 When('the plugin starts', async function (this: BasementGuardianWorld): Promise<void> {
   this.startPlugin();
   await this.awaitStart();
@@ -144,6 +125,25 @@ When('homebridge shuts down', async function (this: BasementGuardianWorld): Prom
 });
 
 // Polls run in sequence. A second new request proves the first post-observation poll completed.
+When('the vendor stops answering the device list', { timeout: STEP_TIMEOUT_MS }, async function (this: BasementGuardianWorld): Promise<void> {
+  const service = await this.restApi();
+  const atArming = deviceRequestCount(service);
+
+  service.holdEveryDeviceRequest();
+  await this.untilTrue(
+    () => deviceRequestCount(service) > atArming,
+    DEADLINE_MS,
+    `the plugin asked for the device list no further time after the hold was armed; it had asked ${String(atArming)} times`,
+  );
+  this.remember(PARKED_DEVICE_REQUESTS, deviceRequestCount(service));
+});
+
+When('the vendor service starts failing every request with status {int}', async function (this: BasementGuardianWorld, status: number): Promise<void> {
+  const service = await this.restApi();
+
+  service.failEveryRequestWith(status);
+});
+
 When('the plugin completes another vendor poll', { timeout: STEP_TIMEOUT_MS }, async function (this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
   const before = deviceRequestCount(service);

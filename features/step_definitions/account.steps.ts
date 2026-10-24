@@ -91,6 +91,13 @@ async function tokenCachePath(world: BasementGuardianWorld): Promise<string> {
   return join(homebridge.storagePath, '.basement-guardian-token.json');
 }
 
+// Arms the tenant to refuse every grant, before the plugin starts or while it runs.
+async function refuseAccountCredentials(world: BasementGuardianWorld): Promise<void> {
+  const tenant = await world.auth0();
+
+  tenant.failWith(REFUSED_STATUS, 'invalid_grant');
+}
+
 async function isPresent(path: string): Promise<boolean> {
   try {
     await access(path);
@@ -106,9 +113,7 @@ async function isPresent(path: string): Promise<boolean> {
 }
 
 Given('the tenant refuses the account credentials', async function (this: BasementGuardianWorld): Promise<void> {
-  const tenant = await this.auth0();
-
-  tenant.failWith(REFUSED_STATUS, 'invalid_grant');
+  await refuseAccountCredentials(this);
 });
 
 Given('the tenant throttles the account', async function (this: BasementGuardianWorld): Promise<void> {
@@ -127,10 +132,6 @@ Given('the tenant issues tokens that expire in {int} seconds', async function (t
   tenant.expireTokenIn(seconds);
 });
 
-Given('the storage holds a token for another account', async function (this: BasementGuardianWorld): Promise<void> {
-  await writeFile(await tokenCachePath(this), JSON.stringify(FOREIGN_CACHE), 'utf8');
-});
-
 Given('the storage holds an expired token for the configured account', async function (this: BasementGuardianWorld): Promise<void> {
   const path = await tokenCachePath(this);
 
@@ -140,6 +141,14 @@ Given('the storage holds an expired token for the configured account', async fun
 
 When('the plugin restarts', async function (this: BasementGuardianWorld): Promise<void> {
   await this.restartPlugin();
+});
+
+When('the tenant starts refusing the account credentials', async function (this: BasementGuardianWorld): Promise<void> {
+  await refuseAccountCredentials(this);
+});
+
+When('the owner replaces the token cache with one for another account', async function (this: BasementGuardianWorld): Promise<void> {
+  await writeFile(await tokenCachePath(this), JSON.stringify(FOREIGN_CACHE), 'utf8');
 });
 
 When('the plugin writes the granted token and issued AWS credentials to the log', function (this: BasementGuardianWorld): void {
