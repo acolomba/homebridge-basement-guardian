@@ -645,6 +645,50 @@ test('grants a later caller a fresh token only after an abandoned grant settles'
   assert.deepStrictEqual({ grantsWhileSettling, grants: transports.length }, { grantsWhileSettling: 1, grants: 2 });
 });
 
+test('rejects a caller that leaves while waiting for an abandoned grant, without a second grant', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const grant = controlledGrant();
+  const first = new AbortController();
+  const firstReason = new Error('First caller cancelled.');
+  const later = new AbortController();
+  const laterReason = new Error('Later caller cancelled.');
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grant.httpFetch }));
+  const firstRejected = assert.rejects(authClient.idToken(first.signal), expectAbortReason(firstReason));
+  const abandonedTransport = await grant.started.promise;
+  first.abort(firstReason);
+  await firstRejected;
+  let laterOutcome = 'pending';
+  authClient.idToken(later.signal).then(
+    () => {
+      laterOutcome = 'fulfilled';
+    },
+    (error: unknown) => {
+      laterOutcome = error === laterReason ? 'rejected with its own reason' : 'rejected otherwise';
+    },
+  );
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+
+  // act
+  later.abort(laterReason);
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+  const outcomeBeforeSettling = laterOutcome;
+  const listenersBeforeSettling = getEventListeners(later.signal, 'abort');
+  grant.response.reject(abandonedTransport.reason);
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+
+  // assert
+  assert.strictEqual(outcomeBeforeSettling, 'rejected with its own reason');
+  assert.deepStrictEqual(listenersBeforeSettling, []);
+  assert.strictEqual(grant.requests.length, 1);
+});
+
 test('starts no grant for an already aborted caller', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
