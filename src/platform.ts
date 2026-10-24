@@ -363,8 +363,10 @@ function dispatchDiscoveredDevice(context: DiscoveryContext, deviceId: string, s
     uncertain.add(uuid);
     // The line names the error class and never its message: a registration
     // failure can carry text the redacting logger has no secret for (D-024).
-    // Homebridge throws only `Error` instances, so the catch assumes one.
-    const errorClass = (error as Error).constructor.name;
+    // Homebridge throws `Error` instances. A throw of any other value is named
+    // by its type instead, because reading the class of `null` or `undefined`
+    // would throw again and lose this line.
+    const errorClass = error instanceof Error ? error.constructor.name : typeof error;
     context.log.error(
       `Accessory registration outcome for ${deviceId} is uncertain because registration threw ${errorClass}. ` +
         'Restart Homebridge before this device can be registered again.',

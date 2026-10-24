@@ -3168,6 +3168,44 @@ describe('registerDiscoveredDevices', () => {
     verify(api);
   });
 
+  for (const { thrown, errorClass } of [
+    { thrown: new TypeError('private-response-body'), errorClass: 'TypeError' },
+    { thrown: 'private-response-body', errorClass: 'string' },
+    { thrown: undefined, errorClass: 'undefined' },
+  ]) {
+    test(`names ${errorClass} as the cause when registration throws it`, () => {
+      // arrange
+      const messages: string[] = [];
+      const api = fakeDiscoveryApi([]);
+      when(() => api.hap)
+        .thenReturn(HAP_NAMESPACE)
+        .times(2);
+      when(() => api.platformAccessory).thenReturn(PLATFORM_ACCESSORY);
+      when(() => mockApiMethod(api, 'registerPlatformAccessories')).thenReturn(() => {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- The case proves the log line survives a throw that is not an Error.
+        throw thrown;
+      });
+      const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+      store.applyDiscovery(geminiDevice());
+      const context = discoveryContext({
+        api,
+        accessories: new Map<string, BasementGuardianPlatformAccessory>(),
+        registry: powerRegistry(),
+        log: createRecordingLog(messages),
+      });
+
+      // act
+      registerDiscoveredDevices(context, [DEVICE_ID], store);
+
+      // assert
+      assert.deepStrictEqual(messages, [
+        `Accessory registration outcome for ${DEVICE_ID} is uncertain because registration threw ${errorClass}. ` +
+          'Restart Homebridge before this device can be registered again.',
+      ]);
+      verify(api);
+    });
+  }
+
   test('persists a vendor rename it already applied when the update that follows it throws', () => {
     // arrange
     const updateCalls: FakeAccessory[][] = [];
