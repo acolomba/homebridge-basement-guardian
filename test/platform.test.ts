@@ -194,6 +194,13 @@ interface FakeApiCall {
   accessories: FakeAccessory[];
 }
 
+type AccessoryMethodName = 'registerPlatformAccessories' | 'unregisterPlatformAccessories' | 'updatePlatformAccessories';
+
+// Homebridge 1.8 types these as methods. Strong-mock stubs their property values.
+function mockApiMethod<K extends AccessoryMethodName>(api: API, name: K): API[K] {
+  return api[name];
+}
+
 // The compatibility signature keeps existing callers and their recording arrays.
 // Each case prescribes and records its own finite API interactions.
 function fakeDiscoveryApi(registerCalls: FakeApiCall[], updateCalls?: FakeAccessory[][], unregisterCalls?: FakeApiCall[]): API;
@@ -517,7 +524,7 @@ describe('BasementGuardianPlatform', () => {
     }).thenReturn(undefined);
     const removedIds: string[] = [];
     const [removed, announceRemoval] = completionSignal();
-    when(() => api.unregisterPlatformAccessories).thenReturn((pluginIdentifier, platformName, accessories) => {
+    when(() => mockApiMethod(api, 'unregisterPlatformAccessories')).thenReturn((pluginIdentifier, platformName, accessories) => {
       removal(pluginIdentifier, platformName, accessories);
       removedIds.push(...accessories.map((accessory) => accessory.UUID));
       announceRemoval();
@@ -743,7 +750,7 @@ describe('BasementGuardianPlatform', () => {
     const platform = new BasementGuardianPlatform(createSilentLog(), { ...accountConfig(), pollInterval: 300 }, api, { httpFetch });
     const [launch, shutdown] = listeners;
     const removalStates: unknown[] = [];
-    when(() => api.unregisterPlatformAccessories).thenReturn((pluginIdentifier, platformName, accessories) => {
+    when(() => mockApiMethod(api, 'unregisterPlatformAccessories')).thenReturn((pluginIdentifier, platformName, accessories) => {
       removal(pluginIdentifier, platformName, accessories);
       removalStates.push({
         inventories,
@@ -1490,12 +1497,12 @@ describe('BasementGuardianPlatform', () => {
     when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
     const accessoryChanges: string[] = [];
-    when(() => api.registerPlatformAccessories)
+    when(() => mockApiMethod(api, 'registerPlatformAccessories'))
       .thenReturn(() => {
         accessoryChanges.push('registered');
       })
       .atMost(1);
-    when(() => api.unregisterPlatformAccessories)
+    when(() => mockApiMethod(api, 'unregisterPlatformAccessories'))
       .thenReturn(() => {
         accessoryChanges.push('removed');
       })
@@ -2457,12 +2464,12 @@ describe('registerDiscoveredDevices', () => {
       when(() => api.platformAccessory)
         .thenReturn(PLATFORM_ACCESSORY)
         .times(2);
-      when(() => api.registerPlatformAccessories)
+      when(() => mockApiMethod(api, 'registerPlatformAccessories'))
         .thenReturn((...parameters) => {
           registration.registerPlatformAccessories(...parameters);
         })
         .times(2);
-      when(() => api.unregisterPlatformAccessories)
+      when(() => mockApiMethod(api, 'unregisterPlatformAccessories'))
         .thenReturn(removal)
         .atMost(1);
       function context(): DiscoveryContext {
@@ -2621,7 +2628,7 @@ describe('registerDiscoveredDevices', () => {
     when(() => api.platformAccessory)
       .thenReturn(PLATFORM_ACCESSORY)
       .times(2);
-    when(() => api.registerPlatformAccessories)
+    when(() => mockApiMethod(api, 'registerPlatformAccessories'))
       .thenReturn((...parameters) => {
         registration.registerPlatformAccessories(...parameters);
       })
@@ -2893,7 +2900,7 @@ describe('registerDiscoveredDevices', () => {
     when(() => api.hap)
       .thenReturn(HAP_NAMESPACE)
       .times(4);
-    when(() => api.updatePlatformAccessories)
+    when(() => mockApiMethod(api, 'updatePlatformAccessories'))
       .thenReturn((candidates) => {
         writes += 1;
 
@@ -3569,7 +3576,7 @@ describe('registerDiscoveredDevices', () => {
     when(() => api.hap)
       .thenReturn(HAP_NAMESPACE)
       .times(2);
-    when(() => api.updatePlatformAccessories)
+    when(() => mockApiMethod(api, 'updatePlatformAccessories'))
       .thenReturn(() => undefined)
       .times(3);
     const context = discoveryContext({ api, accessories, basementGuardianAccessories, registry: createFamilyRegistry(), commands });
@@ -3873,7 +3880,7 @@ describe('registerDiscoveredDevices', () => {
     when(() => api.hap)
       .thenReturn(HAP_NAMESPACE)
       .times(3);
-    when(() => api.updatePlatformAccessories)
+    when(() => mockApiMethod(api, 'updatePlatformAccessories'))
       .thenReturn((candidates) => {
         writes += 1;
 
