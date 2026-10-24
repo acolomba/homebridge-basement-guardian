@@ -1194,6 +1194,52 @@ test('D-13 makes no further attempt once the vendor has refused the account cred
   assert.strictEqual(grantRequests.length, 1);
 });
 
+test('D-13 sends no second grant to a caller that waited for an abandoned refused grant', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const first = new AbortController();
+  const firstReason = new Error('First caller cancelled.');
+  let laterToken: Promise<string> | undefined;
+  let startLater: () => Promise<string> = () => Promise.reject(new Error('The client does not exist yet.'));
+  let grantRequests = 0;
+  // The refusal code is read after the abort check and before the client
+  // stops. Reading it starts the later caller, which still sees a running
+  // client, and abandons the grant, so the later caller waits for it.
+  const refusal = {
+    get error(): string {
+      laterToken ??= startLater();
+      first.abort(firstReason);
+
+      return 'invalid_grant';
+    },
+  };
+  const authClient = createAuthClient(
+    authOptions(storagePath, {
+      httpFetch: () => {
+        grantRequests += 1;
+
+        return Promise.resolve(Object.assign(new Response(null, { status: 403 }), { json: () => Promise.resolve(refusal) }));
+      },
+    }),
+  );
+  startLater = () => authClient.idToken(new AbortController().signal);
+  const firstRejected = assert.rejects(authClient.idToken(first.signal), expectAbortReason(firstReason));
+
+  // act
+  await firstRejected;
+  assert.ok(laterToken !== undefined);
+  const laterRejected = assert.rejects(laterToken, (error: unknown) => {
+    assert.ok(error instanceof AuthHaltedError);
+    assert.strictEqual(error.reason, 'invalid_grant');
+
+    return true;
+  });
+  await laterRejected;
+
+  // assert
+  assert.strictEqual(grantRequests, 1);
+});
+
 test('D-13 logs one error naming the fix when the vendor refuses the account credentials', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
