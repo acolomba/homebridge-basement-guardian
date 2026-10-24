@@ -415,8 +415,13 @@ export function registerDiscoveredDevices(context: DiscoveryContext, deviceIds: 
 // The fallback for an accessory whose trust publication threw. That accessory
 // still reports the trust it last published, which may vouch for readings this
 // push could not confirm, so `Status Active` is withdrawn on every service that
-// carries it. The services stay readable, and the next publication that
-// succeeds republishes the trust, so the fallback clears itself.
+// carries it. The services stay readable.
+//
+// The withdrawal stays until a later publication succeeds. A changed trust or
+// a snapshot `update()` republishes, and so does a repeat of the same trust
+// after a failed row republication. The accessory stores the trust before it
+// republishes, so when the throw came before republication, a repeat of the
+// same trust returns early and leaves the withdrawal in place.
 //
 // It answers whether every service was marked, so the caller does not claim a
 // withdrawal that did not happen.
