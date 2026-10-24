@@ -77,9 +77,12 @@ function createSilentLog(): Logging {
   });
 }
 
-function createRecordingLog(messages: string[]): Logging {
-  const record: (message: string) => void = (message: string): void => {
+// Records each message, and, when the case asks for them, the parameters that
+// travelled beside it.
+function createRecordingLog(messages: string[], parameters?: unknown[][]): Logging {
+  const record: (message: string, ...rest: unknown[]) => void = (message: string, ...rest: unknown[]): void => {
     messages.push(message);
+    parameters?.push(rest);
   };
 
   return Object.assign(record, {
@@ -1845,6 +1848,8 @@ describe('applyMonitoringHealth', () => {
     // arrange
     const heard = new Map<string, MonitoringTrust>();
     const messages: string[] = [];
+    const parameters: unknown[][] = [];
+    const publicationError = new Error('synthetic trust publication failure');
     const restored = restoredAccessories();
     const account = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false } satisfies MonitoringTrust;
     const api = fakeDiscoveryApi([]);
@@ -1853,14 +1858,14 @@ describe('applyMonitoringHealth', () => {
       api,
       accessories: restored.accessories,
       registry: unknownRegistry(),
-      log: createRecordingLog(messages),
+      log: createRecordingLog(messages, parameters),
       basementGuardianAccessories: new Map<string, BasementGuardianAccessory>([
         [
           ACCESSORY_UUID,
           {
             ...recordingBasementGuardianAccessory(DEVICE_ID, []),
             markMonitoring: () => {
-              throw new Error('synthetic trust publication failure');
+              throw publicationError;
             },
           },
         ],
@@ -1883,25 +1888,29 @@ describe('applyMonitoringHealth', () => {
         messages: [`Unable to publish monitoring trust for ${DEVICE_ID}. Its services no longer vouch for their readings.`],
       },
     );
+    assert.deepStrictEqual(parameters, [[publicationError]]);
+    assert.strictEqual(parameters[0]?.[0], publicationError);
     verify(api);
   });
 
   test('claims no withdrawal for a throwing accessory the platform holds no services for', () => {
     // arrange
     const messages: string[] = [];
+    const parameters: unknown[][] = [];
+    const publicationError = new Error('synthetic trust publication failure');
     const account = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false } satisfies MonitoringTrust;
     const context = discoveryContext({
       api: fakeDiscoveryApi([]),
       accessories: new Map<string, BasementGuardianPlatformAccessory>(),
       registry: unknownRegistry(),
-      log: createRecordingLog(messages),
+      log: createRecordingLog(messages, parameters),
       basementGuardianAccessories: new Map<string, BasementGuardianAccessory>([
         [
           ACCESSORY_UUID,
           {
             ...recordingBasementGuardianAccessory(DEVICE_ID, []),
             markMonitoring: () => {
-              throw new Error('synthetic trust publication failure');
+              throw publicationError;
             },
           },
         ],
@@ -1913,6 +1922,8 @@ describe('applyMonitoringHealth', () => {
 
     // assert
     assert.deepStrictEqual(messages, [`Unable to publish monitoring trust for ${DEVICE_ID}, or to withdraw the trust it already reports.`]);
+    assert.deepStrictEqual(parameters, [[publicationError]]);
+    assert.strictEqual(parameters[0]?.[0], publicationError);
   });
 
   test('continues trust updates and cached marking when one accessory fails', async (t: TestContext) => {
